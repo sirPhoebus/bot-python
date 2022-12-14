@@ -1,70 +1,129 @@
 # Import the necessary libraries
 import pandas as pd
-import os
-import requests
+import numpy as np 
+import talib 
+from tqdm import tqdm
 
-if not os.path.exists('log.txt'):
-  # Create the file if it does not exist
-  open('log.txt', 'w').close()
 # Load the historical data for the asset
 data = pd.read_csv('asset_data.csv')
 
-# Calculate the 100-day and 200-day moving averages
-ma_100 = data['Close'].rolling(window=100).mean()
-ma_200 = data['Close'].rolling(window=200).mean()
+# Calculate the Average True Range(ATR)
+data['ATR'] = talib.ATR(data['High'], data['Low'],
+                        data['Close'], timeperiod=24)
+# Calculate the rolling mean of ATR
+data['ATR_MA_4'] = data['ATR'].rolling(4).mean()
+# Flag the minutes where ATR breaks out its rolling mean
+data['ATR_breakout'] = np.where((data['ATR'] > data['ATR_MA_4']), True, False)
+# Calculate the three-candle rolling High
+data['three_candle_High'] = data['High'].rolling(3).max()
+# Check if the fourth candle is Higher than the Highest of the previous 3 candle
+data['four_candle_High'] = np.where( data['High'] >
+    data['three_candle_High'].shift(1), True, False)
+# Calculate the three-candle rolling Low
+data['three_candle_Low'] = data['Low'].rolling(3).min()
+# Check if the fourth candle is Lower than the Lowest of the previous 3 candles
+data['four_candle_Low'] = np.where( data['Low'] <
+    data['three_candle_Low'].shift(1), True, False)
+# Flag long positions
+data['long_positions'] = np.where(data['ATR_breakout'] & data['four_candle_High'], 1, 0)
+# Flag short positions
+data['short_positions'] = np.where(data['ATR_breakout'] & data['four_candle_Low'], -1, 0)
+# Combine long and short  position flags
+data['positions'] = data['long_positions'] + data['short_positions']
+#print(data['positions'])
 
-# Calculate the relative strength index of the asset's price
-rsi = data['Close'].rolling(window=20).apply(lambda x: 100 - (100 / (1 + (x.mean() / x.std()))))
+current_position = 0
+stop_loss = ''
+take_profit = ''
+entry_time = np.nan
+entry_price = np.nan
+take_profit_threshold = 0.07
+stop_loss_threshold = 0.05
 
-# Calculate the Bollinger Bands for the asset's price
-bb_mean = data['Close'].rolling(window=20).mean()
-bb_std = data['Close'].rolling(window=20).std()
-bb_upper = bb_mean + 2 * bb_std
-bb_lower = bb_mean - 2 * bb_std
+trades = pd.DataFrame()
 
-# Create a variable to keep track of the current position (0 = no position, 1 = long position, -1 = short position)
-position = 0
-risk = 0.95
-# Create a variable to keep track of the portfolio value
-portfolio_value = 10000
-SL = 0
-market_perf = portfolio_value / int(data['Close'].iloc[1])
-# Loop through the data and make buy/sell decisions
-for i in range(len(data)):
-    # Check if the 100-day moving average is crossing over the 200-day moving average : ma_100.iloc[i] > ma_200.iloc[i]
-    # check RSI : rsi.iloc[-1] < 30
+# Calculate the PnL for exit of a long position
+def long_exit(data, time, entry_time, entry_price):
+    pnl = round(data.loc[time, 'Close'] - entry_price, 2)
+    return pd.DataFrame([('Long',entry_time,entry_price,time,data.loc[time, 'Close'],pnl)])
     
-    if  rsi.iloc[i] > 33 and position == 0:
-        # Buy the asset if the conditions are met
-        buy_price = data['Close'].iloc[i]
-        position = portfolio_value / buy_price
-        portfolio_value += portfolio_value - (buy_price * position)
-        SL = (buy_price * risk)
-        with open("log.txt", "a") as f:
-            f.write("Bought: "  + str(position) + " @ " + str(buy_price) + " on : " + str(data['Date'].iloc[i]) + "\n")
+# Calculate the PnL for exit of a short position
+def short_exit(data, time, entry_time, entry_price):
+    pnl = round(entry_price - data.loc[time, 'Close'], 2)
+    return pd.DataFrame([('Short',entry_time,entry_price,time,data.loc[time, 'Close'],pnl)])
 
-    # todo
-    elif data['Close'].iloc[i] <= SL or data['Close'].iloc[i] > bb_upper.iloc[i] and position > 0:
-        # Sell the asset if the conditions are met
-        sell_price = data['Close'].iloc[i]
-        
-        # Calculate the profit/loss from the trade
-        profit = sell_price - buy_price
-        with open("log.txt", "a") as f:
-            f.write("Sold: "  + str(position) + " @ " + str(sell_price) + " on : " + str(data['Date'].iloc[i]) + "PNL : " + str(profit) + "\n")
 
-        # Update the portfolio value
-        portfolio_value += profit
-        position = 0
-        with open("log.txt", "a") as f:
-            f.write("Portfolio Value: "  + str(portfolio_value) + "\n")
-    else:
-        pass
+for time in tqdm(data.index):
+    # ---------------------------------------------------------------------------------
+    # Long Position
+    if (current_position == 0) and (data.loc[time, 'positions'] == 1):
+        current_position = 1
+        entry_time = time
+        entry_price = data.loc[time, 'Close']
+        stop_loss = entry_price * (1-stop_loss_threshold)
+        take_profit = entry_price * (1+take_profit_threshold)
 
-# make a GET request to the Coinbase API to retrieve the current price of BTC
-response = requests.get("https://api.coinbase.com/v2/prices/spot?currency=USD")
+    # ---------------------------------------------------------------------------------
+    # Long Exit
+    elif (current_position == 1):
+        # Check for sl and tp
+        if data.loc[time, 'Close'] < stop_loss or data.loc[time, 'Close'] > take_profit:
+            trade_details = long_exit(data, time, entry_time, entry_price)
+            trades = trades.append(trade_details,ignore_index=True)
+            current_position = 0
 
-# parse the response to get the current BTC price
-btc_price = response.json()["data"]["amount"]
-with open("log.txt", "a") as f:
-            f.write("MARKET PERF: "  + str(int(market_perf) * btc_price) + "\n")
+    # ---------------------------------------------------------------------------------
+    # Short Position
+    if (current_position == 0) and (data.loc[time, 'positions'] == -1):
+        current_position = -1
+        entry_price = data.loc[time, 'Close']
+        stop_loss = entry_price * (1+stop_loss_threshold)
+        take_profit = entry_price * (1-take_profit_threshold)
+
+    # ---------------------------------------------------------------------------------
+    # Short Exit
+    elif (current_position == -1):
+        # Check for sl and tp
+        if data.loc[time, 'Close'] > stop_loss or data.loc[time, 'Close'] < take_profit:
+            trade_details = short_exit(data, time, entry_time, entry_price)
+            trades = trades.append(trade_details,ignore_index=True)
+            current_position = 0
+
+    # Dataframe showing the details of the each trade in the dataset. 
+trades.columns=['Position','Entry Time','Entry Price','Exit Time','Exit Price','PnL']
+
+analytics = pd.DataFrame(index=['ATR + Candle Breakout'])
+# Number of long trades
+analytics['num_of_long'] = len(trades.loc[trades.Position=='Long'])
+# Number of short trades
+analytics['num_of_short'] = len(trades.loc[trades.Position=='Short'])
+# Total number of trades
+analytics['total_trades'] = analytics.num_of_long + analytics.num_of_short
+# Profitable trades
+analytics['winners'] = len(trades.loc[trades.PnL>0])
+# Loss-making trades
+analytics['losers'] = len(trades.loc[trades.PnL<=0])
+# Win percentage
+analytics['win_percentage'] = 100*analytics.winners/analytics.total_trades
+# Loss percentage
+analytics['loss_percentage'] = 100*analytics.losers/analytics.total_trades
+# Per trade profit/loss of winning trades
+analytics['per_trade_PnL_winners'] = trades.loc[trades.PnL>0].PnL.mean()
+# Per trade profit/loss of losing trades
+analytics['per_trade_PnL_losers'] = trades.loc[trades.PnL<=0].PnL.mean()
+
+print(analytics.T)
+
+data['global_PNL'] = np.where(data['positions'] == 1,
+data['Close'] - entry_price,
+entry_price - data['Close'])
+
+#Sum up all the PnLs
+global_PNL = data['global_PNL'].sum()
+
+#Print the global PnL
+print("Global PnL: ", global_PNL)
+
+
+
+
