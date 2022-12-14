@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np 
 import talib 
+from tqdm import tqdm
 
 # Load the historical data for the asset
 data = pd.read_csv('asset_data.csv')
@@ -32,12 +33,12 @@ data['positions'] = data['long_positions'] + data['short_positions']
 #print(data['positions'])
 
 current_position = 0
-stop_loss = '0.05'
-take_profit = '0.06'
+stop_loss = ''
+take_profit = ''
 entry_time = np.nan
 entry_price = np.nan
-take_profit_threshold = 0.06
-stop_loss_threshold = 0.03
+take_profit_threshold = 0.08
+stop_loss_threshold = 0.05
 
 trades = pd.DataFrame()
 
@@ -52,7 +53,7 @@ def short_exit(data, time, entry_time, entry_price):
     return pd.DataFrame([('Short',entry_time,entry_price,time,data.loc[time, 'Close'],pnl)])
 
 
-for time in data.index:
+for time in tqdm(data.index):
     # ---------------------------------------------------------------------------------
     # Long Position
     if (current_position == 0) and (data.loc[time, 'positions'] == 1):
