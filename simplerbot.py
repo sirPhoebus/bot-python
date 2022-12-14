@@ -34,7 +34,7 @@ for i in range(len(data)):
     # Check if the 100-day moving average is crossing over the 200-day moving average : ma_100.iloc[i] > ma_200.iloc[i]
     # check RSI : rsi.iloc[-1] < 30
     
-    if  rsi.iloc[i] > 33 and position == 0:
+    if  rsi.iloc[i] > 31 and position == 0:
         # Buy the asset if the conditions are met
         buy_price = data['Close'].iloc[i]
         position = portfolio_value / buy_price

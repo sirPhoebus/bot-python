@@ -38,40 +38,55 @@ take_profit = ''
 entry_time = np.nan
 entry_price = np.nan
 take_profit_threshold = 0.07
-stop_loss_threshold = 0.05
+stop_loss_threshold = 0.99
 
 trades = pd.DataFrame()
 
 # Calculate the PnL for exit of a long position
 def long_exit(data, time, entry_time, entry_price):
+    global trades
+    # Rest of the 
     pnl = round(data.loc[time, 'Close'] - entry_price, 2)
-    return pd.DataFrame([('Long',entry_time,entry_price,time,data.loc[time, 'Close'],pnl)])
+    exit_time = str(pd.to_timedelta(data.loc[time, 'ATR'], unit='h'))
     
+    # Create a DataFrame object with the trade details
+    trade_details = pd.DataFrame([('Long',entry_time,entry_price,exit_time,data.loc[time, 'Close'],pnl)])
+    # Add the trade details to the 'trades' DataFrame
+    trades = trades.append(trade_details,ignore_index=True)
+    return trade_details
+   
 # Calculate the PnL for exit of a short position
+
 def short_exit(data, time, entry_time, entry_price):
+    global trades
+    # Rest of the 
+    exit_time = str(pd.to_timedelta(data.loc[time, 'ATR'], unit='h'))
     pnl = round(entry_price - data.loc[time, 'Close'], 2)
-    return pd.DataFrame([('Short',entry_time,entry_price,time,data.loc[time, 'Close'],pnl)])
+    # Create a DataFrame object with the trade details
+    trade_details = pd.DataFrame([('Short',entry_time,entry_price,exit_time,data.loc[time, 'Close'],pnl)])
+    # Add the trade details to the 'trades' DataFrame
+    trades = trades.append(trade_details,ignore_index=True)
+    return trade_details
 
 
 for time in tqdm(data.index):
+    
     # ---------------------------------------------------------------------------------
     # Long Position
     if (current_position == 0) and (data.loc[time, 'positions'] == 1):
         current_position = 1
-        entry_time = time
+        entry_time = data.loc[time, 'Date']
         entry_price = data.loc[time, 'Close']
         stop_loss = entry_price * (1-stop_loss_threshold)
         take_profit = entry_price * (1+take_profit_threshold)
-
     # ---------------------------------------------------------------------------------
     # Long Exit
     elif (current_position == 1):
         # Check for sl and tp
         if data.loc[time, 'Close'] < stop_loss or data.loc[time, 'Close'] > take_profit:
-            trade_details = long_exit(data, time, entry_time, entry_price)
+            trade_details = long_exit(data, time, data.loc[time, 'Date'], entry_price)
             trades = trades.append(trade_details,ignore_index=True)
             current_position = 0
-
     # ---------------------------------------------------------------------------------
     # Short Position
     if (current_position == 0) and (data.loc[time, 'positions'] == -1):
@@ -79,17 +94,17 @@ for time in tqdm(data.index):
         entry_price = data.loc[time, 'Close']
         stop_loss = entry_price * (1+stop_loss_threshold)
         take_profit = entry_price * (1-take_profit_threshold)
-
     # ---------------------------------------------------------------------------------
     # Short Exit
     elif (current_position == -1):
         # Check for sl and tp
         if data.loc[time, 'Close'] > stop_loss or data.loc[time, 'Close'] < take_profit:
-            trade_details = short_exit(data, time, entry_time, entry_price)
+            trade_details = short_exit(data, time, data.loc[time, 'Date'], entry_price)
             trades = trades.append(trade_details,ignore_index=True)
             current_position = 0
-
-    # Dataframe showing the details of the each trade in the dataset. 
+            
+trades.to_csv('trades.csv')
+# Dataframe showing the details of the each trade in the dataset. 
 trades.columns=['Position','Entry Time','Entry Price','Exit Time','Exit Price','PnL']
 
 analytics = pd.DataFrame(index=['ATR + Candle Breakout'])
@@ -122,8 +137,8 @@ entry_price - data['Close'])
 global_PNL = data['global_PNL'].sum()
 
 #Print the global PnL
-print("Global PnL: ", global_PNL)
-
+print("PnL: ", global_PNL)
+print(trades)
 
 
 
