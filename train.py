@@ -1,3 +1,12 @@
+import pandas as pd 
+import numpy as np 
+import talib 
+import matplotlib.pyplot as plt 
+import logging 
+import matplotlib
+import seaborn as sns
+import webbrowser
+
 def scalping_strategy(data, stop_loss_threshold, take_profit_threshold):
     # Calculate the Average True Range(ATR)
     data['ATR'] = talib.ATR(data['High'], data['Low'],
@@ -81,6 +90,8 @@ def scalping_strategy(data, stop_loss_threshold, take_profit_threshold):
                 
     return data.pnl.sum()
   
+# Load the historical data for the asset
+data = pd.read_csv('asset_data.csv')
 
 train_test_split = int(data.shape[0]*2/3)
 # Get the train data using the split index 
@@ -110,5 +121,25 @@ for i,tp in enumerate(take_profit_range):
             max_ = PnL_grid[i][j]
             best_params = (sl,tp)
 
-print('The highest PnL: '+str(max_))
-print('Optimal stop-loss and profit-taking values: '+str(best_params))
+# print('The highest PnL: '+str(max_))
+# print('Optimal stop-loss and profit-taking values: '+str(best_params))
+
+
+
+fig, ax = plt.subplots()
+sns.heatmap(PnL_grid, annot=True, cmap="RdYlGn")
+
+ax.set_xticks(np.arange(len(take_profit_range)))
+ax.set_yticks(np.arange(len(stop_loss_range)))
+
+# Label using the threshold ranges
+ax.set_xticklabels([round(x,2) for x in take_profit_range])
+ax.set_yticklabels([round(x,2) for x in stop_loss_range])
+
+# Rotate the tick labels and set their alignment
+plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
+         rotation_mode="anchor")
+            
+ax.set_title("Stop-Loss vs Take-Profit Grid")
+fig.tight_layout()
+plt.show()
