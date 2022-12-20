@@ -9,6 +9,7 @@ import numpy as np
 # Initialize variables
 prev_price = None
 trend = None
+pd.options.display.max_rows = 50
 
 def getHistorical():
 # Set the API endpoint URL
@@ -18,8 +19,8 @@ def getHistorical():
     # "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h","1d", "3d", "1w", "1M"
     params = {
         'symbol': 'BTCUSDT',
-        'interval': '1m',
-        'limit': '10' # max 1000
+        'interval': '15m',
+        'limit': '50' # max 1000
     }
 
     # Make the request to the API
@@ -59,6 +60,8 @@ while True:
     hp = df["high_price"]
 
     # Calculate the Average True Range(ATR)
+    # The value of the ATR is not directly related to the price of an asset. Instead, it reflects the degree of price fluctuation over a given time period. 
+    # A higher ATR value indicates that the asset has had a larger range of price movements over the given time period, while a lower ATR value indicates a smaller range of price movements.
     df['ATR'] = talib.ATR(hp, lp, cp, timeperiod=24)
     # Calculate the rolling mean of ATR
     df['ATR_MA_4'] = df['ATR'].rolling(4).mean()
