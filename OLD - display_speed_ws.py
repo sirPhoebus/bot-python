@@ -30,7 +30,7 @@ import termcolor
 previous_speeds = []
 
 # Set the number of previous speeds to consider
-num_prev_speeds = 10
+num_prev_speeds = 9
 
 
 # Define a function to process incoming websocket messages
@@ -81,18 +81,14 @@ def get_positive_speed(data, previous_speeds):
         else:
             avg_prev_speeds = sum(previous_speeds) / len(previous_speeds)
         factor = 1000000
-        formatted_speed = 'speed is: {:.2f} milliseconds'.format(positive_speed * factor)
-        formatted_avg_prev_speeds = 'the average prev speeds is: {:.2f}'.format(avg_prev_speeds * factor)
         if positive_speed > avg_prev_speeds:
             # Output the strings in green
-            print(termcolor.colored(formatted_speed, 'green'))
-            print(termcolor.colored(formatted_avg_prev_speeds, 'green'))
+            print(termcolor.colored('the speed delta is: {:.2f}'.format((positive_speed - avg_prev_speeds) * factor), 'green'))
             return positive_speed
         # If the positive speed is not above the average of the previous speeds
         elif positive_speed < avg_prev_speeds:
             # Output the strings in red
-            print(termcolor.colored(formatted_speed, 'red'))
-            print(termcolor.colored(formatted_avg_prev_speeds, 'red'))
+            print(termcolor.colored('the speed delta is: {:.2f}'.format((positive_speed - avg_prev_speeds) * factor), 'red'))
             # Return 0
             return 0
         else:
