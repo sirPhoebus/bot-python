@@ -99,4 +99,4 @@ while True:
     print(f"Current price: {round(current_price, 1)} ({trend})")
 
     # Sleep for 1 minute
-    time.sleep(60)
+    time.sleep(300)
