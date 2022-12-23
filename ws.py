@@ -25,6 +25,13 @@ import numpy as np
 # "Q": "0.500",   // Taker buy quote asset volume
 # "B": "123456"   // Ignore
 
+# Initialize an empty list to store the previous positive speeds
+previous_speeds = []
+
+# Set the number of previous speeds to consider
+num_prev_speeds = 10
+
+
 # Define a function to process incoming websocket messages
 def process_message(msg):
     data = json.loads(msg)
@@ -37,7 +44,15 @@ def process_message(msg):
     try:
         # Convert the 'k' dictionary into a Pandas dataframe
         df = pd.DataFrame.from_dict(k_dict, orient='index').transpose()
-        print(df)
+        # In the main loop, after calling the function to get the current positive speed
+        positive_speed = get_positive_speed(k_dict, previous_speeds)
+        # Append the current positive speed to the list of previous speeds
+        previous_speeds.append(positive_speed)
+        # If the number of previous speeds exceeds the maximum number to consider
+        if len(previous_speeds) > num_prev_speeds:
+            # Remove the oldest positive speed from the list
+            previous_speeds.pop(0)
+
     except ValueError:
         # Handle the error
         print("Error: The shape of the data is different from the dataframe.")
@@ -46,6 +61,26 @@ def process_message(msg):
 ubwa = unicorn_binance_websocket_api.BinanceWebSocketApiManager(exchange="binance.com")
 ubwa.create_stream(['kline_1m'], ['btcusdt'])
 #channels = ['kline_5m', 'kline_15m', 'kline_30m', 'kline_1h', 'kline_12h', 'depth5']
+
+def get_positive_speed(data, previous_speeds):
+    try:
+        # Convert the 'k' dictionary into a Pandas dataframe
+        df = pd.DataFrame.from_dict(data, orient='index').transpose()
+        # Calculate the positive speed by dividing the difference between the high and low prices by the duration of the candle
+        positive_speed = (float(df['h']) - float(df['l'])) / (float(df['T']) - float(df['t']))
+        # Calculate the average of the previous speeds
+        avg_prev_speeds = sum(previous_speeds) / len(previous_speeds)
+        # If the positive speed is above the average of the previous speeds
+        if positive_speed > avg_prev_speeds:
+            # Print a message
+            print(f"Positive speed of {positive_speed} is above the average of the previous {len(previous_speeds)} speeds ({avg_prev_speeds})")
+        # Return the positive speed
+        return positive_speed
+    except ValueError:
+        # Handle the error
+        print("Error: The shape of the data is different from the dataframe.")
+        # You can add any additional code here to handle the error, such as modifying the data or dataframe, or raising a different exception.
+
 
 skip_first_message = True
 while True:
