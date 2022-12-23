@@ -5,6 +5,7 @@ import pandas as pd
 import datetime
 import talib 
 import numpy as np 
+import termcolor
 
 
 # "t": 123400000, // Kline start time
@@ -37,6 +38,7 @@ def process_message(msg):
     data = json.loads(msg)
     # Extract the 'k' dictionary from the data
     k_dict = data['data']['k']
+    #print(k_dict)
     # Convert the 'k' dictionary into a Pandas dataframe
     # Specify the column names
     #column_names = ["Start Time", "Close Time", "Symbol", "Interval", "First ID", "Last ID", "Open Price", "Close Price", "High Price", "Low Price", "Base Asset Volume", "Number of Trades", "Is this Kline Closed?", "Quote Asset Volume", "Taker Buy Base Asset Volume", "Taker Buy Quote Asset Volume", "Ignore"]
@@ -66,16 +68,37 @@ def get_positive_speed(data, previous_speeds):
     try:
         # Convert the 'k' dictionary into a Pandas dataframe
         df = pd.DataFrame.from_dict(data, orient='index').transpose()
+        # Calculate the duration of the candle
+        duration = float(df['T']) - float(df['t'])
+        # If the duration is zero, return a default value
+        if duration == 0:
+            return 0
         # Calculate the positive speed by dividing the difference between the high and low prices by the duration of the candle
-        positive_speed = (float(df['h']) - float(df['l'])) / (float(df['T']) - float(df['t']))
-        # Calculate the average of the previous speeds
-        avg_prev_speeds = sum(previous_speeds) / len(previous_speeds)
-        # If the positive speed is above the average of the previous speeds
+        positive_speed = (float(df['h']) - float(df['l'])) / duration
+
+        if len(previous_speeds) == 0:
+            avg_prev_speeds = 0
+        else:
+            avg_prev_speeds = sum(previous_speeds) / len(previous_speeds)
+        factor = 1000000
+        formatted_speed = 'speed is: {:.2f} milliseconds'.format(positive_speed * factor)
+        formatted_avg_prev_speeds = 'the average prev speeds is: {:.2f}'.format(avg_prev_speeds * factor)
         if positive_speed > avg_prev_speeds:
-            # Print a message
-            print(f"Positive speed of {positive_speed} is above the average of the previous {len(previous_speeds)} speeds ({avg_prev_speeds})")
-        # Return the positive speed
-        return positive_speed
+            # Output the strings in green
+            print(termcolor.colored(formatted_speed, 'green'))
+            print(termcolor.colored(formatted_avg_prev_speeds, 'green'))
+            return positive_speed
+        # If the positive speed is not above the average of the previous speeds
+        elif positive_speed < avg_prev_speeds:
+            # Output the strings in red
+            print(termcolor.colored(formatted_speed, 'red'))
+            print(termcolor.colored(formatted_avg_prev_speeds, 'red'))
+            # Return 0
+            return 0
+        else:
+            # Return the positive speed
+            return 0
+    # If an error occurs while processing the data
     except ValueError:
         # Handle the error
         print("Error: The shape of the data is different from the dataframe.")
