@@ -8,7 +8,11 @@ import numpy as np
 import termcolor
 import os
 import requests
+import bot_ATR
 
+sum = 0
+avg_speed_min = 0
+avg_speed_15min = 0
 
 def process_message(msg):
     """Processes a websocket message and adds the close price to the dataframe."""
@@ -37,6 +41,8 @@ ubwa.create_stream(['kline_1m'], ['btcusdt'])
 df = pd.DataFrame(columns=['close_time', 'close_price'])
 
 skip_first_message = True
+current_time = datetime.datetime.now()
+formatted_time = current_time.strftime("%H:%M:%S")
 while True:
    
     oldest_data_from_stream_buffer = ubwa.pop_stream_data_from_stream_buffer()
@@ -48,26 +54,26 @@ while True:
         df_new = process_message(oldest_data_from_stream_buffer)
         # Append the new data to the dataframe
         df = df.append(df_new, ignore_index=True)
-        # If the dataframe has more than 60 rows, drop the oldest row
-        if len(df) > 60:
+        # If the dataframe has more than 900 rows, drop the oldest row
+        if len(df) > 900:
             df = df.iloc[1:]
-
-        # If the dataframe has 60 rows, calculate and display the acceleration
-        if len(df) == 60:
-            # Calculate the speeds per second from the data in the dataframe
-            speeds = calculate_speeds(df)
-            avg_speed = np.mean(speeds)
-
-            if avg_speed >= 0:
-                print(termcolor.colored('Avg ($/min): {:.2f}'.format(avg_speed)), 'green')
-            else:
-                print(termcolor.colored('Avg: {:.2f}'.format(avg_speed)), 'red')
-
+        speeds = calculate_speeds(df)
+        if len(df) == 900:
+            avg_speed_15min = np.mean(speeds[-900])
+            #print('Avg ($/15min): {:.2f}'.format(avg_speed_15min))
+        if len(df) > 60:
+            avg_speed_min = np.mean(speeds[-60:])
+            #print('Avg ($/min): {:.2f}'.format(avg_speed_min))
+        if len(df) > 3:
             cur_speed = np.mean(speeds[-3:])
-            if cur_speed >= 0:
-                print(termcolor.colored('Current ($/sec): {:.2f}'.format(cur_speed)), 'green')
-            else:
-                print(termcolor.colored('Current: {:.2f}'.format(cur_speed)), 'red')
+            sum = sum + cur_speed 
+            
+            
+            #print the last price from the dataframe
+            print("Bot started at: " + str(formatted_time) + " --- Last Close Price: {}".format(df.iloc[-1]['close_price']))
+            print('Last candle: {:.2f}'.format(cur_speed) + '$' + ' --- {:.2f}'.format(avg_speed_min) + '$/min) --- {:.2f}'.format(avg_speed_15min) + '($/15min) --- TOTAL: {:.2f}'.format(sum) + '$')
+            print(bot_ATR.generate_trend())
+
 
 
 
