@@ -8,7 +8,7 @@ import numpy as np
 import termcolor
 import os
 import requests
-import bot_ATR
+import ATR
 
 sum = 0
 avg_speed_min = 0
@@ -72,7 +72,7 @@ while True:
             #print the last price from the dataframe
             print("Bot started at: " + str(formatted_time) + " --- Last Close Price: {}".format(df.iloc[-1]['close_price']))
             print('Last candle: {:.2f}'.format(cur_speed) + '$' + ' --- {:.2f}'.format(avg_speed_min) + '$/min) --- {:.2f}'.format(avg_speed_15min) + '($/15min) --- TOTAL: {:.2f}'.format(sum) + '$')
-            print(bot_ATR.generate_trend())
+            print(ATR.generate_trend())
 
 
 
