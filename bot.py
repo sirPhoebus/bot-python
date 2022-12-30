@@ -3,7 +3,6 @@ import websocket
 import json
 import pandas as pd
 import datetime
-import talib 
 import numpy as np 
 import termcolor
 import os
@@ -15,15 +14,17 @@ if not os.path.exists('log.txt'):
   # Create the file if it does not exist
   open('log.txt', 'w').close()
 
+last_price = 0
 sum = 0
 avg_speed_min = 0
 avg_speed_5min = 0
 avg_speed_15min = 0
-positions = {}
-risk_short = 1.05
-greed_short = 0.95
-risk_long = 0.95
-greed_long = 1.05
+long_position = 0
+short_position = 0
+risk_short = 1.01
+greed_short = 0.98
+risk_long = 0.98
+greed_long = 1.01
 portfolio_value = 10000
 SLL = 0
 TPL = 0
@@ -49,6 +50,10 @@ def calculate_speeds(df):
     speeds = np.diff(close_prices)
     # Return the speeds per second
     return speeds
+
+def log(message):
+    with open("log.txt", "a") as f:
+        f.write(message + '\n')
 
 # Connect to the websocket API and create a stream
 ubwa = unicorn_binance_websocket_api.BinanceWebSocketApiManager(exchange="binance.com")
@@ -93,72 +98,53 @@ while True:
             last_price = float(df.iloc[-1]['close_price'])
 
             #print the last price from the dataframe
-            # log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.2f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
-            # log(log_message)
+            log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.2f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
+            log(log_message)
 
         # Buying long position
-        if ATR.generate_trend() == 'uptrend' and avg_speed_5min > 0:
+        if ATR.generate_trend() == 'uptrend' and avg_speed_5min > 0 and long_position == 0:
+            # Buy the asset if the conditions are met
             buy_price = df.iloc[-1]['close_price']
+            long_position = portfolio_value / buy_price
+            portfolio_value += portfolio_value - (buy_price * long_position)
             SLL = (buy_price * risk_long)
             TPL = (buy_price * greed_long)
-            position_id = len(positions) + 1
-            positions[position_id] = {
-                'type': 'long',
-                'buy_price': buy_price,
-                'SLL': SLL,
-                'TPL': TPL,
-            }
-            log_message = "Bought long: {} @ {}".format(position_id, buy_price)
-            log_message += "TPL & SLL: {} / {}".format(TPL, SLL)
-            log(log_message)
+            with open("log.txt", "a") as f:
+                f.write("Bought long: "  + str(long_position) + " @ " + str(buy_price) + '\n')
+                f.write("TPL & SLL: "  + str(TPL) + " / " + str(SLL) + '\n')
 
         # Buying short position
-        if ATR.generate_trend() == 'downtrend' and avg_speed_5min < 0:
+        if ATR.generate_trend() == 'downtrend' and avg_speed_5min < 0 and short_position == 0:
+            # Buy the asset if the conditions are met
             buy_price = df.iloc[-1]['close_price']
+            short_position = portfolio_value / buy_price
+            portfolio_value += portfolio_value - (buy_price * short_position)
             SLS = (buy_price * risk_short)
             TPS = (buy_price * greed_short)
-            position_id = len(positions) + 1
-            positions[position_id] = {
-                'type': 'short',
-                'buy_price': buy_price,
-                'SLS': SLS,
-                'TPS': TPS,
-            }
-            log_message = "Bought short: {} @ {}".format(position_id, buy_price)
-            log_message += "TPS & SLS: {} / {}".format(TPS, SLS)
-            log(log_message)
-
-        # Selling positions
-        for position_id, position in positions.items():
-            type = position['type']
-            buy_price = position['buy_price']
-            if type == 'long':
-                SLL = position['SLL']
-                TPL = position['TPL']
-                if last_price <= SLL or last_price >= TPL:
-                    log_message = 'close long position {} @: {}'.format(position_id, last_price)
-                    log(log_message)
-                    portfolio_value += portfolio_value - (last_price * long_position)
-                    long_position = 0
-                    del positions[position_id]
-                    log_message = 'Portfolio: {}'.format(portfolio_value)
-                    log(log_message)
-
-            elif type == 'short':
-                SLS = position['SLS']
-                TPS = position['TPS']
-                if last_price <= SLS or last_price >= TPS:
-                    log_message = 'close short position {} @: {}'.format(position_id, last_price)
-                    log(log_message)
-                    portfolio_value += portfolio_value - (last_price * short_position)
-                    short_position = 0
-                    del positions[position_id]
-                    log_message = 'Portfolio: {}'.format(portfolio_value)
-                    log(log_message)
-
-        def log(message):
             with open("log.txt", "a") as f:
-                f.write(message + '\n')
+                f.write("Bought short: "  + str(short_position) + " @ " + str(buy_price) + '\n')
+                f.write("TPS & SLS: "  + str(TPS) + " / " + str(SLS) + '\n')
+
+        # Selling Long position
+        if (last_price <= SLL or last_price >= TPL) and (TPL !=0 and long_position != 0):
+            with open("log.txt", "a") as f:
+                f.write('close Long position @:' + str(last_price) + '\n')
+            portfolio_value += portfolio_value - (last_price * long_position)
+            long_position = 0 
+            with open("log.txt", "a") as f:
+                f.write('Portfolio :' + str(portfolio_value) + '\n')
+        # Selling Short position
+        if (last_price >= SLS or last_price <= TPS) and (TPS !=0 and short_position != 0):
+            with open("log.txt", "a") as f:
+                f.write('close Short position @:' + str(last_price) + '\n')
+            portfolio_value += portfolio_value - (last_price * short_position)
+            short_position = 0 
+            with open("log.txt", "a") as f:
+                f.write('Portfolio :' + str(portfolio_value) + '\n')
+        
+
+
+
 
 
                 # pygame.mixer.init()

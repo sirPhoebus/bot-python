@@ -3,14 +3,13 @@ import time
 import requests
 import pandas as pd
 import datetime
-import talib 
 import numpy as np 
 
 
 def generate_trend():
     # Initialize variables
     trend = None
-    pd.options.display.max_rows = 50
+    pd.options.display.max_rows = 5
 
     def getHistorical():
     # Set the API endpoint URL
@@ -20,8 +19,8 @@ def generate_trend():
         # "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h","1d", "3d", "1w", "1M"
         params = {
             'symbol': 'BTCUSDT',
-            'interval': '30m',
-            'limit': '50' # max 1000
+            'interval': '1m',
+            'limit': '10' # max 1000
         }
 
         # Make the request to the API
@@ -63,29 +62,26 @@ def generate_trend():
         # Calculate the Average True Range(ATR)
         # The value of the ATR is not directly related to the price of an asset. Instead, it reflects the degree of price fluctuation over a given time period. 
         # A higher ATR value indicates that the asset has had a larger range of price movements over the given time period, while a lower ATR value indicates a smaller range of price movements.
-        df['ATR'] = talib.ATR(hp, lp, cp, timeperiod=24)
-        # Calculate the rolling mean of ATR
-        df['ATR_MA_4'] = df['ATR'].rolling(4).mean()
+
+        df['ATR'] = pd.DataFrame({'hp': hp, 'lp': lp, 'cp': cp}).apply(lambda x: x.max() - x.min(), axis=1)
+        # Calculate the rolling mean of ATR using a 4-period window
+        df['ATR_MA_4'] = df['ATR'].ewm(span=4).mean()
         # Flag the minutes where ATR breaks out its rolling mean
         df['ATR_breakout'] = np.where((df['ATR'] > df['ATR_MA_4']), True, False)
         # Calculate the three-candle rolling High
         df['three_candle_High'] = hp.rolling(3).max()
         # Check if the fourth candle is Higher than the Highest of the previous 3 candle
-        df['four_candle_High'] = np.where( hp >
-            df['three_candle_High'].shift(1), True, False)
+        df['four_candle_High'] = np.where(hp > df['three_candle_High'].shift(1), True, False)
         # Calculate the three-candle rolling Low
         df['three_candle_Low'] = lp.rolling(3).min()
         # Check if the fourth candle is Lower than the Lowest of the previous 3 candles
-        df['four_candle_Low'] = np.where( lp <
-            df['three_candle_Low'].shift(1), True, False)
+        df['four_candle_Low'] = np.where(lp < df['three_candle_Low'].shift(1), True, False)
         # Flag long positions
         df['long_positions'] = np.where(df['ATR_breakout'] & df['four_candle_High'], 1, 0)
         # Flag short positions
         df['short_positions'] = np.where(df['ATR_breakout'] & df['four_candle_Low'], -1, 0)
-        # Combine long and short  position flags
+        # Combine long and short position flags
         df['positions'] = df['long_positions'] + df['short_positions']
-        #print(df)
-            
         # Sleep in sec
         time.sleep(5)
         # Check if the current price is higher or lower than the moving average
@@ -100,5 +96,5 @@ def generate_trend():
         # print(f"Current MA: {round(moving_avg, 1)}", flush=True)
         # print(f"Current price: {round(current_price, 1)} ({trend})", flush=True)
         
-
+#generate_trend()
 
