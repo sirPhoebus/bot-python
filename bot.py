@@ -19,13 +19,16 @@ sum = 0
 avg_speed_min = 0
 avg_speed_5min = 0
 avg_speed_15min = 0
-position = 0
-risk = 0.95
-greed = 1.05
-# Create a variable to keep track of the portfolio value
+positions = {}
+risk_short = 1.05
+greed_short = 0.95
+risk_long = 0.95
+greed_long = 1.05
 portfolio_value = 10000
-SL = 0
-TP = 0
+SLL = 0
+TPL = 0
+SLS = 0
+TPS = 0
 gain = 0 
 
 def process_message(msg):
@@ -88,33 +91,81 @@ while True:
             sum = sum + cur_speed 
             
             last_price = float(df.iloc[-1]['close_price'])
+
             #print the last price from the dataframe
-            
+            # log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.2f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
+            # log(log_message)
+
+        # Buying long position
+        if ATR.generate_trend() == 'uptrend' and avg_speed_5min > 0:
+            buy_price = df.iloc[-1]['close_price']
+            SLL = (buy_price * risk_long)
+            TPL = (buy_price * greed_long)
+            position_id = len(positions) + 1
+            positions[position_id] = {
+                'type': 'long',
+                'buy_price': buy_price,
+                'SLL': SLL,
+                'TPL': TPL,
+            }
+            log_message = "Bought long: {} @ {}".format(position_id, buy_price)
+            log_message += "TPL & SLL: {} / {}".format(TPL, SLL)
+            log(log_message)
+
+        # Buying short position
+        if ATR.generate_trend() == 'downtrend' and avg_speed_5min < 0:
+            buy_price = df.iloc[-1]['close_price']
+            SLS = (buy_price * risk_short)
+            TPS = (buy_price * greed_short)
+            position_id = len(positions) + 1
+            positions[position_id] = {
+                'type': 'short',
+                'buy_price': buy_price,
+                'SLS': SLS,
+                'TPS': TPS,
+            }
+            log_message = "Bought short: {} @ {}".format(position_id, buy_price)
+            log_message += "TPS & SLS: {} / {}".format(TPS, SLS)
+            log(log_message)
+
+        # Selling positions
+        for position_id, position in positions.items():
+            type = position['type']
+            buy_price = position['buy_price']
+            if type == 'long':
+                SLL = position['SLL']
+                TPL = position['TPL']
+                if last_price <= SLL or last_price >= TPL:
+                    log_message = 'close long position {} @: {}'.format(position_id, last_price)
+                    log(log_message)
+                    portfolio_value += portfolio_value - (last_price * long_position)
+                    long_position = 0
+                    del positions[position_id]
+                    log_message = 'Portfolio: {}'.format(portfolio_value)
+                    log(log_message)
+
+            elif type == 'short':
+                SLS = position['SLS']
+                TPS = position['TPS']
+                if last_price <= SLS or last_price >= TPS:
+                    log_message = 'close short position {} @: {}'.format(position_id, last_price)
+                    log(log_message)
+                    portfolio_value += portfolio_value - (last_price * short_position)
+                    short_position = 0
+                    del positions[position_id]
+                    log_message = 'Portfolio: {}'.format(portfolio_value)
+                    log(log_message)
+
+        def log(message):
             with open("log.txt", "a") as f:
-                    f.write('Price:' + str(last_price) + ' {:.2f}'.format(cur_speed) + '$/10sec' + ' --- {:.2f}'.format(avg_speed_min) + '$/min --- {:.2f}'.format(avg_speed_5min) + '$/5min --- TOTAL: {:.2f}'.format(sum) + '$' + '\n')
+                f.write(message + '\n')
 
-            if ATR.generate_trend() == 'uptrend' and avg_speed_5min > 0 and position == 0:
-                # Buy the asset if the conditions are met
-                buy_price = df.iloc[-1]['close_price']
-                position = portfolio_value / buy_price
-                portfolio_value += portfolio_value - (buy_price * position)
-                SL = (buy_price * risk)
-                TP = (buy_price * greed)
-                with open("log.txt", "a") as f:
-                    f.write("Bought: "  + str(position) + " @ " + str(buy_price) + '\n')
 
-            if (last_price <= SL or last_price >= TP) and (TP !=0 and position != 0):
-                with open("log.txt", "a") as f:
-                    f.write('close position @:' + str(last_price) + '\n')
-                portfolio_value += portfolio_value - (last_price * position)
-                position = 0 
-                with open("log.txt", "a") as f:
-                    f.write('Portfolio :' + str(portfolio_value) + '\n')
-                pygame.mixer.init()
-                pygame.mixer.music.load('go.mp3')
-                pygame.mixer.music.play()
-                pygame.time.delay(5000)
-                pygame.mixer.music.stop()
+                # pygame.mixer.init()
+                # pygame.mixer.music.load('go.mp3')
+                # pygame.mixer.music.play()
+                # pygame.time.delay(5000)
+                # pygame.mixer.music.stop()
 
 
 
