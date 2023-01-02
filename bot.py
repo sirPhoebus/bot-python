@@ -21,10 +21,10 @@ avg_speed_5min = 0
 avg_speed_15min = 0
 long_position = 0
 short_position = 0
-risk_short = 1.01
-greed_short = 0.98
-risk_long = 0.98
-greed_long = 1.01
+risk_short = 1.005
+greed_short = 0.995
+risk_long = 0.995
+greed_long = 1.005
 portfolio_value = 10000
 SLL = 0
 TPL = 0
@@ -98,11 +98,11 @@ while True:
             last_price = float(df.iloc[-1]['close_price'])
 
             #print the last price from the dataframe
-            log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.2f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
+            log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.4f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
             log(log_message)
 
         # Buying long position
-        if ATR.generate_trend() == 'uptrend' and avg_speed_5min > 0 and long_position == 0:
+        if ATR.generate_trend() == 'uptrend' and sum >= 5 and long_position == 0 and short_position == 0:
             # Buy the asset if the conditions are met
             buy_price = df.iloc[-1]['close_price']
             long_position = portfolio_value / buy_price
@@ -114,7 +114,7 @@ while True:
                 f.write("TPL & SLL: "  + str(TPL) + " / " + str(SLL) + '\n')
 
         # Buying short position
-        if ATR.generate_trend() == 'downtrend' and avg_speed_5min < 0 and short_position == 0:
+        if ATR.generate_trend() == 'downtrend' and sum <= -5 and short_position == 0 and long_position == 0:
             # Buy the asset if the conditions are met
             buy_price = df.iloc[-1]['close_price']
             short_position = portfolio_value / buy_price

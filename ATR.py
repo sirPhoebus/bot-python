@@ -54,7 +54,8 @@ def generate_trend():
 
         # Calculate the moving average
         moving_avg = float(df["close_price"].apply(float).mean())
-        current_price = float(df.tail(1)["close_price"])
+        #current_price = float(df.tail(1)["close_price"])
+        current_price = df.iloc[-1]["close_price"]
         cp = df["close_price"]
         lp = df["low_price"]
         hp = df["high_price"]
@@ -83,6 +84,7 @@ def generate_trend():
         # Combine long and short position flags
         df['positions'] = df['long_positions'] + df['short_positions']
         # Sleep in sec
+        #print(df)
         time.sleep(5)
         # Check if the current price is higher or lower than the moving average
         if current_price > moving_avg:
@@ -96,5 +98,5 @@ def generate_trend():
         # print(f"Current MA: {round(moving_avg, 1)}", flush=True)
         # print(f"Current price: {round(current_price, 1)} ({trend})", flush=True)
         
-#generate_trend()
+
 
