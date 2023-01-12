@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <link rel="stylesheet" href="https://s3.tradingview.com/tv.css">
+  </head>
+  <body>
+    <div id="tv_chart_container"></div>
+    <script>
+      // Function to update chart with new data
+      function updateChart(data) {
+        // Parse the data and format it to match the format used by TradingView
+        var parsedData = data.map(function(d) {
+          return {
+            time: d.t,
+            open: d.o,
+            high: d.h,
+            low: d.l,
+            close: d.c,
+            volume: d.v
+          };
+        });
+
+        // Update the chart with the new data
+        chartingLibrary.updateData(parsedData);
+      }
+
+      // Connect to websocket
+      var socket = new WebSocket('ws://localhost:8888');
+
+      // On message event, update the chart
+      socket.onmessage = function (event) {
+        var data = JSON.parse(event.data);
+        updateChart(data);
+      };
+
+      // Initialize chart
+      var chartingLibrary = new TradingView.widget({
+        container_id: 'tv_chart_container',
+        symbol: 'BTCUSDT',
+        interval: '1D',
+        datafeed: {
+          onDataCallback: function(data) {
+            updateChart(data);
+          }
+        },
+        library_path: "https://s3.tradingview.com/",
+        width: 800,
+        height: 600
+      });
+
+      // Refresh the chart every 1 second
+      setInterval(function() {
+        socket.send("getData");
+      }, 1000);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>VWAP</title>
+        <script src="https://cdn.plotly/plotly-latest.min.js"></script>
+    </head>
+    <body>
+        <div id="plot"></div>
+    </body>
+    <script>
+        // The URL of the websocket endpoint
+        var socketUrl = 'ws://your-websocket-endpoint';
+
+        // The Plotly graph object
+        var plot;
+
+        // Connect to the websocket
+        var socket = new WebSocket(socketUrl);
+
+        // Function to handle incoming data
+        socket.onmessage = function(event) {
+            // Parse the incoming data as JSON
+            var data = JSON.parse(event.data);
+
+            // Update the plot with the new data
+            Plotly.update('plot', data);
+        };
+
+        // Fetch the initial data and create the plot
+        fetch('/data')
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                // Create the plot
+                plot = Plotly.newPlot('plot', data);
+            });
+    </script>
+</html>

@@ -26,6 +26,7 @@ TPL = 0
 SLS = 0
 TPS = 0
 gain = 0 
+period = 14
 
 def process_message(msg):
     """Processes a websocket message and adds the close price to the dataframe."""
@@ -34,7 +35,8 @@ def process_message(msg):
     df = pd.DataFrame.from_dict(k_dict, orient='index').transpose()
     df['close_time'] = pd.to_datetime(df['t'], unit='ms')
     df['close_price'] = df['c'].astype(float)
-    df = df[['close_time', 'close_price']]
+    df['volume'] = df['v'].astype(float)
+    df = df[['close_time', 'close_price','volume']]
     return df
 
 def calculate_speeds(df):
@@ -46,6 +48,24 @@ def calculate_speeds(df):
     # Return the speeds per second
     return speeds
 
+def calculate_vwap(df):
+    df["close_price"] = df["close_price"].astype(float)
+    df["volume"] = df["volume"].astype(float)
+    # Create a new column for the cumulative volume
+    df['cum_volume'] = df['volume'].cumsum()
+    df["cum_volume"] = df["cum_volume"].astype(float)
+    df['VWAP'] = (df['cum_volume'] - df['volume'].rolling(period).sum() ) / (df['cum_volume'] - df['cum_volume'].rolling(period).sum() ) * df['close_price']
+    # Calculate the short and long period moving averages
+    df['short_ma'] = df['VWAP'].rolling(window=5).mean()
+    df['long_ma'] = df['VWAP'].rolling(window=20).mean()
+    # Create a new column for the signal
+    df['signal'] = None
+    # Generate a buy signal when the short MA crosses above the long MA
+    df.loc[(df['short_ma'] > df['long_ma']) & (df['short_ma'].shift(1) <= df['long_ma'].shift(1)), 'signal'] = 'Buy'
+    # Generate a sell signal when the short MA crosses below the long MA
+    df.loc[(df['short_ma'] < df['long_ma']) & (df['short_ma'].shift(1) >= df['long_ma'].shift(1)), 'signal'] = 'Sell'
+    return df
+    
 # Connect to the websocket API and create a stream
 ubwa = unicorn_binance_websocket_api.BinanceWebSocketApiManager(exchange="binance.com")
 ubwa.create_stream(['kline_1m'], ['btcusdt'])
@@ -70,6 +90,7 @@ while True:
         # Append the new data to the dataframe
         df = df.append(df_new, ignore_index=True)
         # If the dataframe has more than 900 rows, drop the oldest row
+        
         if len(df) > 911:
             df = df.iloc[1:]
         speeds = calculate_speeds(df)
@@ -87,7 +108,7 @@ while True:
             sum = sum + cur_speed 
             
             last_price = float(df.iloc[-1]['close_price'])
-
+            print(calculate_vwap(df).tail(1))
             #print the last price from the dataframe
             log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.4f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
             print(log_message)
@@ -127,17 +148,6 @@ while True:
             short_position = 0 
             print('Portfolio :' + str(portfolio_value) + '\n')
         
-
-
-
-
-
-                # pygame.mixer.init()
-                # pygame.mixer.music.load('go.mp3')
-                # pygame.mixer.music.play()
-                # pygame.time.delay(5000)
-                # pygame.mixer.music.stop()
-
 
 
 

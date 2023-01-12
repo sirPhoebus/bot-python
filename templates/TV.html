@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Price</title>
+    <script src="https://s3.tradingview.com/tv.js"></script>
+    <style>
+        .tradingview-widget-container {
+            width: 100%;
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Binance WebSocket Test</h1>
+    <div class="tradingview-widget-container"></div>
+
+    <script>
+        new TradingView.widget({
+            "width": 980,
+            "height": 610,
+            "symbol": "BTCUSDT",
+            "interval": "60",
+            "timezone": "Etc/UTC",
+            "theme": "Light",
+            "style": "1",
+            "locale": "en",
+            "toolbar_bg": "#f1f3f6",
+            "hide_top_toolbar": true,
+            "save_image": false,
+            "hideideas": true,
+            "studies": [
+                "Candlestick@tv-basicstudies"
+            ],
+            "container_id": "tradingview_candle"
+        });
+        // Create a WebSocket connection to the server
+        const socket = new WebSocket("ws://localhost:8888");
+        var widget;
+        var data = []
+        // Function to handle incoming messages
+        socket.onmessage = function(event) {
+            var data_obj = JSON.parse(event.data);
+            data.push([data_obj.t[0], data_obj.o[0], data_obj.h[0], data_obj.l[0], data_obj.c[0], data_obj.v[0]]);
+            if (!widget) {
+                widget = new TradingView.widget({
+                    "container_id": "tradingview_candle",
+                    "datafeed": new Datafeeds.UDFCompatibleDatafeed(""),
+                    "library_path": "charting_library/",
+                    "locale": "en",
+                    "disabled_features": ["use_localstorage_for_settings"],
+                    "enabled_features": ["study_templates"],
+                    "charts_storage_url": "http://saveload.tradingview.com",
+                    "charts_storage_api_version": "1.1",
+                    "client_id": "tradingview.com",
+                    "user_id": "public_user_id",
+                    "fullscreen": true,
+                    "autosize": true,
+                    "studies": [
+                        "Candlestick@tv-basicstudies"
+                    ]
+                });
+            }
+            widget.onChartReady(function() {
+                widget.chart().applyData(data);
+            });
+        }
+    </script>
+</body>
+</html>       

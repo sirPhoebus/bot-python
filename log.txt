@@ -124,3 +124,32 @@ Price: 16591.15 -0.03$/10sec --- 0.04$/min --- 0.00$/5min --- TOTAL: 2.06$
 Price: 16590.81 0.03$/10sec --- 0.02$/min --- 0.00$/5min --- TOTAL: 2.09$
 Price: 16590.58 -0.06$/10sec --- 0.01$/min --- 0.00$/5min --- TOTAL: 2.03$
 Price: 16590.82 -0.11$/10sec --- 0.02$/min --- 0.00$/5min --- TOTAL: 1.92$
+Bot started at: 13:09:08
+Bot started at: 13:11:02
+Bot started at: 13:12:38
+Bot started at: 13:13:23
+Bot started at: 13:13:33
+Bot started at: 13:13:52
+Bot started at: 13:17:07
+Bot started at: 13:29:59
+Bot started at: 13:37:21
+Bot started at: 14:36:42
+Bot started at: 14:38:21
+Bot started at: 14:44:09
+Bot started at: 14:46:28
+Bot started at: 14:47:23
+Bot started at: 14:49:51
+Bot started at: 14:49:56
+Bot started at: 14:51:47
+Bot started at: 14:51:52
+Bot started at: 14:52:15
+Bot started at: 14:54:04
+Bot started at: 14:54:32
+Bot started at: 14:54:43
+Bot started at: 14:54:51
+Bot started at: 14:54:57
+Bot started at: 14:55:01
+Bot started at: 14:56:47
+Bot started at: 14:56:47
+Bot started at: 14:56:53
+Bot started at: 14:57:08

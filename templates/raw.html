@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Binance WebSocket Test</title>
+</head>
+<body>
+    <h1>Binance WebSocket Test</h1>
+    <div id="data"></div>
+
+    <script>
+        // Create a WebSocket connection to the server
+        const socket = new WebSocket("ws://localhost:8888");
+
+        // Function to handle incoming messages
+        socket.onmessage = function(event) {
+            var data = JSON.parse(event.data);
+            var data_div = document.getElementById("data");
+            data_div.innerHTML = "Last Data: " + JSON.stringify(data);
+        }
+    </script>
+</body>
+</html>
