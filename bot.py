@@ -4,10 +4,10 @@ import json
 import pandas as pd
 import datetime
 import numpy as np 
-import termcolor
 import os
 import requests
 import ATR
+import BB
 
 last_price = 0
 sum = 0
@@ -27,6 +27,8 @@ SLS = 0
 TPS = 0
 gain = 0 
 period = 14
+mult = 2
+length = 20
 
 def process_message(msg):
     """Processes a websocket message and adds the close price to the dataframe."""
@@ -47,6 +49,25 @@ def calculate_speeds(df):
     speeds = np.diff(close_prices)
     # Return the speeds per second
     return speeds
+
+def calculate_BB_trend(df):
+    df["close_price"] = df["close_price"].astype(float)
+    df["low_price"] = df["low_price"].astype(float)
+    df["high_price"] = df["high_price"].astype(float)
+
+    current_price = df.iloc[-1]["close_price"]
+    hp = df["high_price"]
+    basis = np.mean(hp[-length:])
+    dev = mult * np.std(hp[-length:])
+    upper = basis + dev
+    lower = basis - dev
+    if current_price <= lower:
+        trend = 'Lower Bound Hit!'
+    if current_price >= upper:
+        trend = 'Upper Bound Hit!'
+    if current_price > lower or current_price < upper:
+        trend = 'In range'
+    return trend
 
 def calculate_vwap(df):
     df["close_price"] = df["close_price"].astype(float)
@@ -88,7 +109,8 @@ while True:
         # Process the message and get the dataframe
         df_new = process_message(oldest_data_from_stream_buffer)
         # Append the new data to the dataframe
-        df = df.append(df_new, ignore_index=True)
+        # old : df = df.append(df_new, ignore_index=True)
+        df = pd.concat([df, df_new], ignore_index=True)
         # If the dataframe has more than 900 rows, drop the oldest row
         
         if len(df) > 911:
@@ -106,9 +128,10 @@ while True:
         if len(df) > 10:
             cur_speed = np.mean(speeds[-3:])
             sum = sum + cur_speed 
-            
+        if len(df) % 60 == 0:
             last_price = float(df.iloc[-1]['close_price'])
-            print(calculate_vwap(df).tail(1))
+            print("VWAP: "  + calculate_vwap(df))
+            print("BB: " + calculate_BB_trend(df))
             #print the last price from the dataframe
             log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.4f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
             print(log_message)

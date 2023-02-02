@@ -68,5 +68,5 @@ def generate_trend():
 
         time.sleep(1)
         
-generate_trend()
+
 
