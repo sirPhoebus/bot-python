@@ -10,12 +10,15 @@
     <script>
         // Create a WebSocket connection to the server
         const socket = new WebSocket("ws://localhost:8888");
-
+        var messages = [];
         // Function to handle incoming messages
         socket.onmessage = function(event) {
             var data = JSON.parse(event.data);
+            messages.push(data);
             var data_div = document.getElementById("data");
-            data_div.innerHTML = "Last Data: " + JSON.stringify(data);
+            data_div.innerHTML = "Data: <br>" + messages.map(function(message){
+                return JSON.stringify(message) + "<br>"
+            }).join(" ")
         }
     </script>
 </body>
