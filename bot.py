@@ -1,13 +1,9 @@
 import unicorn_binance_websocket_api
-import websocket
 import json
 import pandas as pd
 import datetime
 import numpy as np 
-import os
-import requests
-import ATR
-import BB
+
 
 last_price = 0
 sum = 0
