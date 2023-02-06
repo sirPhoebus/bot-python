@@ -64,9 +64,10 @@ def calculate_BB_trend(df):
     upper = basis + dev
     lower = basis - dev
     if current_price <= lower:
-        trend = 'Lower Bound Hit!'
+        #Lower Bound Hit!
+        trend = 'BUY'
     if current_price >= upper:
-        trend = 'Upper Bound Hit!'
+        trend = 'SELL'
     if current_price > lower or current_price < upper:
         trend = 'In range'
     return trend
@@ -173,50 +174,52 @@ while True:
         if len(df) > 10:
             cur_speed = np.mean(speeds[-3:])
             sum = sum + cur_speed 
-        if len(df) % 5 == 0:
-            last_price = float(df.iloc[-1]['close_price'])
-            print("VWAP: "  + str(calculate_vwap(df)))
-            print("BB: " + str(calculate_BB_trend(df)))
-            print("ATR: " + calculate_ATR(df))
+        # if len(df) % 5 == 0:
+        #     last_price = float(df.iloc[-1]['close_price'])
+        #     print("VWAP: "  + str(calculate_vwap(df)))
+        #     print("BB: " + str(calculate_BB_trend(df)))
+        #     print("ATR: " + calculate_ATR(df))
 
             #print the last price from the dataframe
             # log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.4f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
             # print(log_message)
 
         # Buying long position
-        # if ATR.generate_trend() == 'uptrend' and sum >= 5 and long_position == 0 and short_position == 0:
-        #     # Buy the asset if the conditions are met
-        #     buy_price = df.iloc[-1]['close_price']
-        #     long_position = portfolio_value / buy_price
-        #     portfolio_value += portfolio_value - (buy_price * long_position)
-        #     SLL = (buy_price * risk_long)
-        #     TPL = (buy_price * greed_long)
-        #     print("Bought long: "  + str(long_position) + " @ " + str(buy_price) + '\n')
-        #     print("TPL & SLL: "  + str(TPL) + " / " + str(SLL) + '\n')
+        if calculate_ATR(df) == 'uptrend' and calculate_BB_trend(df) == 'BUY' and sum >= 5 and long_position == 0 and short_position == 0:
+            # Buy the asset if the conditions are met
+            buy_price = df.iloc[-1]['close_price']
+            long_position = portfolio_value / buy_price
+            portfolio_value += portfolio_value - (buy_price * long_position)
+            SLL = (buy_price * risk_long)
+            TPL = (buy_price * greed_long)
+            print("Bought long: "  + str(long_position) + " @ " + str(buy_price) + '\n')
+            print("TPL & SLL: "  + str(TPL) + " / " + str(SLL) + '\n')
 
         # # Buying short position
-        # if ATR.generate_trend() == 'downtrend' and sum <= -5 and short_position == 0 and long_position == 0:
-        #     # Buy the asset if the conditions are met
-        #     buy_price = df.iloc[-1]['close_price']
-        #     short_position = portfolio_value / buy_price
-        #     portfolio_value += portfolio_value - (buy_price * short_position)
-        #     SLS = (buy_price * risk_short)
-        #     TPS = (buy_price * greed_short)
-        #     print("Bought short: "  + str(short_position) + " @ " + str(buy_price) + '\n')
-        #     print("TPS & SLS: "  + str(TPS) + " / " + str(SLS) + '\n')
+        if calculate_ATR(df) == 'downtrend' and calculate_BB_trend(df) == 'SELL' and sum >= -5 and long_position == 0 and short_position == 0:
+            # Buy the asset if the conditions are met
+            buy_price = df.iloc[-1]['close_price']
+            short_position = portfolio_value / buy_price
+            portfolio_value += portfolio_value - (buy_price * short_position)
+            SLS = (buy_price * risk_short)
+            TPS = (buy_price * greed_short)
+            print("Bought short: "  + str(short_position) + " @ " + str(buy_price) + '\n')
+            print("TPS & SLS: "  + str(TPS) + " / " + str(SLS) + '\n')
 
         # # Selling Long position
-        # if (last_price <= SLL or last_price >= TPL) and (TPL !=0 and long_position != 0):
-        #     print('close Long position @:' + str(last_price) + '\n')
-        #     portfolio_value += portfolio_value - (last_price * long_position)
-        #     long_position = 0 
-        #     print('Portfolio :' + str(portfolio_value) + '\n')
-        # # Selling Short position
-        # if (last_price >= SLS or last_price <= TPS) and (TPS !=0 and short_position != 0):
-        #     print('close Short position @:' + str(last_price) + '\n')
-        #     portfolio_value += portfolio_value - (last_price * short_position)
-        #     short_position = 0 
-        #     print('Portfolio :' + str(portfolio_value) + '\n')
+        if (last_price <= SLL or last_price >= TPL) and (TPL !=0 and long_position != 0):
+            last_price = df.iloc[-1]['close_price']
+            print('close Long position @:' + str(last_price) + '\n')
+            portfolio_value += portfolio_value - (last_price * long_position)
+            long_position = 0 
+            print('Portfolio :' + str(portfolio_value) + '\n')
+        # Selling Short position
+        if (last_price >= SLS or last_price <= TPS) and (TPS !=0 and short_position != 0):
+            last_price = df.iloc[-1]['close_price']
+            print('close Short position @:' + str(last_price) + '\n')
+            portfolio_value += portfolio_value - (last_price * short_position)
+            short_position = 0 
+            print('Portfolio :' + str(portfolio_value) + '\n')
         
 
 
