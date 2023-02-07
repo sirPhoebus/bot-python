@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import datetime
 import numpy as np 
-
+import time
 
 last_price = 0
 sum = 0
@@ -131,16 +131,13 @@ def calculate_ATR(df):
     
 # Connect to the websocket API and create a stream
 ubwa = unicorn_binance_websocket_api.BinanceWebSocketApiManager(exchange="binance.com")
-ubwa.create_stream(['kline_1m'], ['btcusdt'])
+ubwa.create_stream(['kline_5m'], ['btcusdt'])
 
 # Create an empty dataframe to store the close prices
 df = pd.DataFrame(columns=['close_time', 'close_price'])
 
 skip_first_message = True
-current_time = datetime.datetime.now()
-formatted_time = current_time.strftime("%H:%M:%S")
-with open("log.txt", "a") as f:
-        f.write("Bot started at: " + str(formatted_time) + '\n')
+
 while True:
    
     oldest_data_from_stream_buffer = ubwa.pop_stream_data_from_stream_buffer()
@@ -216,7 +213,7 @@ while True:
             portfolio_value += portfolio_value - (last_price * short_position)
             short_position = 0 
             print('Portfolio :' + str(portfolio_value) + '\n')
-        
+        time.sleep(1)
 
 
 

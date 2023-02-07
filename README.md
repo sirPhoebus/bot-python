@@ -1,6 +1,11 @@
 # bot-python
+On windows
 python -m venv venv
 venv\scripts\activate
+
+On Linux
+source venv/bin/activate
+
 
 Run pip install for the missing libraries <br/>
 Training 
