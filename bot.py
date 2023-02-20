@@ -4,6 +4,10 @@ import pandas as pd
 import datetime
 import numpy as np 
 import time
+import requests
+
+#define sybol
+symbol = 'BTCUSDT'
 
 last_price = 0
 sum = 0
@@ -25,6 +29,29 @@ gain = 0
 period = 14
 mult = 2
 length = 20
+
+# Define timeframes
+tf_higher = '1d' # Higher time-frame
+tf_lower = '1h' # Lower time-frame
+
+def getHistorical(symbol, tf):
+# Set the API endpoint URL
+    url = 'https://api.binance.com/api/v3/klines'
+
+    # Set the request parameters
+    # "1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h", "12h","1d", "3d", "1w", "1M"
+    params = {
+        'symbol': symbol,
+        'interval': tf 
+    }
+
+    # Make the request to the API
+    response = requests.get(url, params=params)
+
+    # Check the status code to make sure the request was successful
+    # Convert the response to a JSON object
+    df = response.json()    
+    return df
 
 def process_message(msg):
     """Processes a websocket message and adds the close price to the dataframe."""
@@ -82,7 +109,29 @@ def calculate_vwap(df):
         return "buy"
     else:
         return "sell"
-    
+def getTrendTimeframe (tf):
+    # Get historical data
+    dt = getHistorical(symbol, tf)
+
+    # Extract the relevant data from the historical candles
+    open_lower = np.array([candle[1] for candle in dt])
+    close_lower = np.array([candle[4] for candle in dt])
+
+    # Define a function to determine if a candle is bullish or bearish
+    def is_bullish_candle(open, close):
+        return close > open
+
+    # Calculate the number of bullish candles on the lower time-frame
+    bullish_count = 0
+    for i in range(len(open_lower)):
+        if is_bullish_candle(open_lower[i], close_lower[i]):
+            bullish_count += 1
+
+    # Determine if the majority of candles on the lower time-frame are bullish
+    trend = (bullish_count > len(open_lower) / 2)
+    lower_candles = len(open_lower)
+    return trend, bullish_count, lower_candles
+
 def calculate_ATR(df):
     df["close_price"] = df["close_price"].astype(float)
     df["low_price"] = df["low_price"].astype(float)
@@ -130,91 +179,105 @@ def calculate_ATR(df):
     
     
 # Connect to the websocket API and create a stream
-ubwa = unicorn_binance_websocket_api.BinanceWebSocketApiManager(exchange="binance.com")
-ubwa.create_stream(['kline_5m'], ['btcusdt'])
+#ubwa = unicorn_binance_websocket_api.BinanceWebSocketApiManager(exchange="binance.com")
+#ubwa.create_stream(['kline_5m'], ['btcusdt'])
 
 # Create an empty dataframe to store the close prices
-df = pd.DataFrame(columns=['close_time', 'close_price'])
+#df = pd.DataFrame(columns=['close_time', 'close_price'])
 
-skip_first_message = True
+#skip_first_message = True
 
-while True:
+
+trend, bullish_count, lower_candles = getTrendTimeframe('6h')
+print('6h:' + str(trend) + '(' + str(bullish_count) + '/' + str(lower_candles) + ')' + '\n')
+trend, bullish_count, lower_candles = getTrendTimeframe('4h')
+print('4h:' + str(trend) + '(' + str(bullish_count) + '/' + str(lower_candles) + ')' + '\n')
+trend, bullish_count, lower_candles = getTrendTimeframe('2h')
+print('2h:' + str(trend) + '(' + str(bullish_count) + '/' + str(lower_candles) + ')' + '\n')
+trend, bullish_count, lower_candles = getTrendTimeframe('1h')
+print('1h:' + str(trend) + '(' + str(bullish_count) + '/' + str(lower_candles) + ')' + '\n')
+trend, bullish_count, lower_candles = getTrendTimeframe('30m')
+print('30m:' + str(trend) + '(' + str(bullish_count) + '/' + str(lower_candles) + ')' + '\n')
+
+
+
+# while True:
    
-    oldest_data_from_stream_buffer = ubwa.pop_stream_data_from_stream_buffer()
-    if oldest_data_from_stream_buffer:
-        if skip_first_message:
-            skip_first_message = False
-            continue
-        # Process the message and get the dataframe
-        df_new = process_message(oldest_data_from_stream_buffer)
-        # Append the new data to the dataframe
-        # old : df = df.append(df_new, ignore_index=True)
-        df = pd.concat([df, df_new], ignore_index=True)
-        # If the dataframe has more than 900 rows, drop the oldest row
+#     oldest_data_from_stream_buffer = ubwa.pop_stream_data_from_stream_buffer()
+#     if oldest_data_from_stream_buffer:
+#         if skip_first_message:
+#             skip_first_message = False
+#             continue
+#         # Process the message and get the dataframe
+#         df_new = process_message(oldest_data_from_stream_buffer)
+#         # Append the new data to the dataframe
+#         # old : df = df.append(df_new, ignore_index=True)
+#         df = pd.concat([df, df_new], ignore_index=True)
+#         # If the dataframe has more than 900 rows, drop the oldest row
         
-        if len(df) > 911:
-            df = df.iloc[1:]
-        speeds = calculate_speeds(df)
-        if len(df) > 900:
-            avg_speed_15min = np.mean(speeds[-900])
-            #print('Avg ($/15min): {:.2f}'.format(avg_speed_15min))
-        if len(df) > 300:
-            avg_speed_5min = np.mean(speeds[-300:])
-            #print('Avg ($/min): {:.2f}'.format(avg_speed_min))
-        if len(df) > 60:
-            avg_speed_min = np.mean(speeds[-60:])
-            #print('Avg ($/min): {:.2f}'.format(avg_speed_min))
-        if len(df) > 10:
-            cur_speed = np.mean(speeds[-3:])
-            sum = sum + cur_speed 
-        # if len(df) % 5 == 0:
-        #     last_price = float(df.iloc[-1]['close_price'])
-        #     print("VWAP: "  + str(calculate_vwap(df)))
-        #     print("BB: " + str(calculate_BB_trend(df)))
-        #     print("ATR: " + calculate_ATR(df))
+#         if len(df) > 911:
+#             df = df.iloc[1:]
+#         speeds = calculate_speeds(df)
+#         if len(df) > 900:
+#             avg_speed_15min = np.mean(speeds[-900])
+#             #print('Avg ($/15min): {:.2f}'.format(avg_speed_15min))
+#         if len(df) > 300:
+#             avg_speed_5min = np.mean(speeds[-300:])
+#             #print('Avg ($/min): {:.2f}'.format(avg_speed_min))
+#         if len(df) > 60:
+#             avg_speed_min = np.mean(speeds[-60:])
+#             #print('Avg ($/min): {:.2f}'.format(avg_speed_min))
+#         if len(df) > 10:
+#             cur_speed = np.mean(speeds[-3:])
+#             sum = sum + cur_speed 
+#         # if len(df) % 5 == 0:
+#         #     last_price = float(df.iloc[-1]['close_price'])
+#         #     print("VWAP: "  + str(calculate_vwap(df)))
+#         #     print("BB: " + str(calculate_BB_trend(df)))
+#         #     print("ATR: " + calculate_ATR(df))
 
-            #print the last price from the dataframe
-            # log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.4f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
-            # print(log_message)
+#             #print the last price from the dataframe
+#             # log_message = 'Price: {} {:.2f}$/10sec --- {:.2f}$/min --- {:.4f}$/5min --- TOTAL: {:.2f}$'.format(last_price, cur_speed, avg_speed_min, avg_speed_5min, sum)
+#             # print(log_message)
 
-        # Buying long position
-        if calculate_ATR(df) == 'uptrend' and calculate_BB_trend(df) == 'BUY' and sum >= 5 and long_position == 0 and short_position == 0:
-            # Buy the asset if the conditions are met
-            buy_price = df.iloc[-1]['close_price']
-            long_position = portfolio_value / buy_price
-            portfolio_value += portfolio_value - (buy_price * long_position)
-            SLL = (buy_price * risk_long)
-            TPL = (buy_price * greed_long)
-            print("Bought long: "  + str(long_position) + " @ " + str(buy_price) + '\n')
-            print("TPL & SLL: "  + str(TPL) + " / " + str(SLL) + '\n')
+#         # Buying long position
+#         if calculate_ATR(df) == 'uptrend' and calculate_BB_trend(df) == 'BUY' and sum >= 5 and long_position == 0 and short_position == 0:
+#             # Buy the asset if the conditions are met
+#             buy_price = df.iloc[-1]['close_price']
+#             long_position = portfolio_value / buy_price
+#             portfolio_value += portfolio_value - (buy_price * long_position)
+#             SLL = (buy_price * risk_long)
+#             TPL = (buy_price * greed_long)
+#             print("Bought long: "  + str(long_position) + " @ " + str(buy_price) + '\n')
+#             print("TPL & SLL: "  + str(TPL) + " / " + str(SLL) + '\n')
 
-        # # Buying short position
-        if calculate_ATR(df) == 'downtrend' and calculate_BB_trend(df) == 'SELL' and sum >= -5 and long_position == 0 and short_position == 0:
-            # Buy the asset if the conditions are met
-            buy_price = df.iloc[-1]['close_price']
-            short_position = portfolio_value / buy_price
-            portfolio_value += portfolio_value - (buy_price * short_position)
-            SLS = (buy_price * risk_short)
-            TPS = (buy_price * greed_short)
-            print("Bought short: "  + str(short_position) + " @ " + str(buy_price) + '\n')
-            print("TPS & SLS: "  + str(TPS) + " / " + str(SLS) + '\n')
+#         # # Buying short position
+#         if calculate_ATR(df) == 'downtrend' and calculate_BB_trend(df) == 'SELL' and sum >= -5 and long_position == 0 and short_position == 0:
+#             # Buy the asset if the conditions are met
+#             buy_price = df.iloc[-1]['close_price']
+#             short_position = portfolio_value / buy_price
+#             portfolio_value += portfolio_value - (buy_price * short_position)
+#             SLS = (buy_price * risk_short)
+#             TPS = (buy_price * greed_short)
+#             print("Bought short: "  + str(short_position) + " @ " + str(buy_price) + '\n')
+#             print("TPS & SLS: "  + str(TPS) + " / " + str(SLS) + '\n')
 
-        # # Selling Long position
-        if (last_price <= SLL or last_price >= TPL) and (TPL !=0 and long_position != 0):
-            last_price = df.iloc[-1]['close_price']
-            print('close Long position @:' + str(last_price) + '\n')
-            portfolio_value += portfolio_value - (last_price * long_position)
-            long_position = 0 
-            print('Portfolio :' + str(portfolio_value) + '\n')
-        # Selling Short position
-        if (last_price >= SLS or last_price <= TPS) and (TPS !=0 and short_position != 0):
-            last_price = df.iloc[-1]['close_price']
-            print('close Short position @:' + str(last_price) + '\n')
-            portfolio_value += portfolio_value - (last_price * short_position)
-            short_position = 0 
-            print('Portfolio :' + str(portfolio_value) + '\n')
-        time.sleep(1)
-
+#         # # Selling Long position
+#         if (last_price <= SLL or last_price >= TPL) and (TPL !=0 and long_position != 0):
+#             last_price = df.iloc[-1]['close_price']
+#             print('close Long position @:' + str(last_price) + '\n')
+#             portfolio_value += portfolio_value - (last_price * long_position)
+#             long_position = 0 
+#             print('Portfolio :' + str(portfolio_value) + '\n')
+#         # Selling Short position
+#         if (last_price >= SLS or last_price <= TPS) and (TPS !=0 and short_position != 0):
+#             last_price = df.iloc[-1]['close_price']
+#             print('close Short position @:' + str(last_price) + '\n')
+#             portfolio_value += portfolio_value - (last_price * short_position)
+#             short_position = 0 
+#             print('Portfolio :' + str(portfolio_value) + '\n')
+#         time.sleep(1)
+#         #print(calculate_ATR(df), calculate_BB_trend(df), sum)
 
 
 
