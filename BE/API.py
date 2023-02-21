@@ -4,6 +4,7 @@ import numpy as np
 import requests
 from fastapi import FastAPI
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 last_price = 0
 sum = 0
@@ -228,45 +229,55 @@ def getTrendTimeframe (symbol, tf):
     return trend, bullish_count
 
 app = FastAPI()
+# Set up CORS
+origins = [
+    "http://localhost:3000",
+    "http://localhost:8000",
+]
 
-
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 @app.get("/")
 def read_root():
     return {"Working..."}
 
 @app.get("/white_soldiers")
-def get_data(symbol:str, tf: str):
+async def get_data(symbol:str, tf: str):
     data = getTrendTimeframe(symbol, tf)
     return {"data": data}
 
 @app.get("/russian_doll")
-def get_data(symbol:str):
+async def get_data(symbol:str):
     data = getRussianDollTrend(symbol)
     return {"data": data}
 
 @app.get("/bb_trend")
-def get_data(symbol: str, tf: str):
+async def get_data(symbol: str, tf: str):
     data = calculate_BB_trend(symbol, tf)
     return {"data": data}
 
 @app.get("/vwap")
-def get_data(symbol: str, tf: str):
+async def get_data(symbol: str, tf: str):
     data = calculate_vwap(symbol, tf)
     return {"data": data}
 
 @app.get("/atr")
-def get_data(symbol: str, tf: str):
+async def get_data(symbol: str, tf: str):
     data = calculate_ATR(symbol, tf)
     return {"data": data}
 
 @app.get("/ob")
-def get_data(symbol: str):
+async def get_data(symbol: str):
     data = getOrderBook(symbol)
     return {"data": data}
 
 @app.get("/agg_vol")
-def get_data():
+async def get_data():
     data = getAggVolume()
     return {"data": data}
 
