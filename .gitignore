@@ -3,4 +3,5 @@
 .idea
 __pycache__
 venv
-node_modules
+fe/node_modules
+

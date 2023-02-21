@@ -27,6 +27,16 @@ mult = 2
 length = 20
 nbrOfBullishCandles = 3
 
+def getAggVolume():
+    url= "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=2&page=1&sparkline=false&price_change_percentage=1h%2C24h"
+    response = requests.get(url).json()
+    return response
+
+def getGlobalData():
+    url= "https://api.coingecko.com/api/v3/global"
+    response = requests.get(url).json()
+    return response
+
 def calculate_ATR(symbol:str, tf:str):
     df = pd.DataFrame(getHistorical(symbol,tf), columns=[
     "open_time",
@@ -219,6 +229,8 @@ def getTrendTimeframe (symbol, tf):
 
 app = FastAPI()
 
+
+
 @app.get("/")
 def read_root():
     return {"Working..."}
@@ -233,7 +245,7 @@ def get_data(symbol:str):
     data = getRussianDollTrend(symbol)
     return {"data": data}
 
-@app.get("/BB_trend")
+@app.get("/bb_trend")
 def get_data(symbol: str, tf: str):
     data = calculate_BB_trend(symbol, tf)
     return {"data": data}
@@ -243,14 +255,24 @@ def get_data(symbol: str, tf: str):
     data = calculate_vwap(symbol, tf)
     return {"data": data}
 
-@app.get("/ATR")
+@app.get("/atr")
 def get_data(symbol: str, tf: str):
     data = calculate_ATR(symbol, tf)
     return {"data": data}
 
-@app.get("/OB")
+@app.get("/ob")
 def get_data(symbol: str):
     data = getOrderBook(symbol)
+    return {"data": data}
+
+@app.get("/agg_vol")
+def get_data():
+    data = getAggVolume()
+    return {"data": data}
+
+@app.get("/global")
+def get_data():
+    data = getGlobalData()
     return {"data": data}
 
 #launch fastapi server
