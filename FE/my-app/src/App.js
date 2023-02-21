@@ -61,7 +61,7 @@ function App() {
     setSelectedTf(event.target.value);
   }
 
-  const tfOptions = ["1d", "6h", "4h", "2h", "1h", "30min", "15min", "5min", "1min"];
+  const tfOptions = ["1d", "6h", "4h", "2h", "1h", "30m", "15m", "5m", "1m"];
 
   return (
     <div className="App">
@@ -76,19 +76,19 @@ function App() {
           </select>
         </div>
         <div>
-          whiteSoldiersData: {JSON.stringify(whiteSoldiersData)}
+          whiteSoldiersData: {JSON.stringify(whiteSoldiersData[1] - 250)}
         </div>
         <div>
-          russianDollData: {JSON.stringify(russianDollData)}
+          russianDollData: {JSON.stringify(russianDollData[0] - russianDollData[1]/2 - russianDollData[2]/4 - russianDollData[3]/12 - russianDollData[4]/60)}
         </div>
         <div>
-          bbTrendData: {JSON.stringify(bbTrendData)}
+          Bollinger: {JSON.stringify(bbTrendData)}
         </div>
         <div>
-          vwapData: {JSON.stringify(vwapData)}
+          VWAP: {JSON.stringify(vwapData)}
         </div>
         <div>
-          atrData: {JSON.stringify(atrData)}
+          Avg True Range: {JSON.stringify(atrData)}
         </div>
         <div>
           {tableData.max && (
@@ -99,13 +99,13 @@ function App() {
         </div>
         <div>{aggVolData[0] && (
           <div>
-            <label>aggVolData: {JSON.stringify(aggVolData[0].price_change_percentage_24h)}</label>
+            <label>24h price: {JSON.stringify(aggVolData[0].price_change_percentage_24h.toFixed(2))}</label>
           </div>
         )}
         </div>
-        <div>{(globalData[0]) && (
+        <div>{(globalData.data) && (
           <div>
-            <label>globalData: {JSON.stringify(globalData[0].total_market_cap)}</label>
+            <label>24h market cap: {JSON.stringify(globalData.data.market_cap_change_percentage_24h_usd.toFixed(2))}</label>
             </div>
             )}        
         </div>
