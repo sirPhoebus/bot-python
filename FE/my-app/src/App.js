@@ -103,8 +103,11 @@ function App() {
           </div>
         )}
         </div>
-        <div>
-        market_cap_change_percentage_24h_usd: {JSON.stringify(globalData.data.market_cap_change_percentage_24h_usd)}
+        <div>{(globalData[0]) && (
+          <div>
+            <label>globalData: {JSON.stringify(globalData[0].total_market_cap)}</label>
+            </div>
+            )}        
         </div>
       </header>
     </div>
