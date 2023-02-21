@@ -237,7 +237,7 @@ def getTrendTimeframe (symbol, tf):
 app = FastAPI()
 # Set up CORS
 origins = [
-    "http://localhost:3000",
+    "http://localhost:4200",
     "http://localhost:8000",
 ]
 
