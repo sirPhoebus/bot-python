@@ -5,6 +5,7 @@ import requests
 from fastapi import FastAPI
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware
+import asyncio
 
 last_price = 0
 sum = 0
@@ -188,9 +189,9 @@ def calculate_vwap(symbol, tf):
     df['short_ma'] = df['VWAP'].rolling(window=5).mean()
     df['long_ma'] = df['VWAP'].rolling(window=20).mean()
     if df['short_ma'].iloc[-1] > df['long_ma'].iloc[-1]:
-        return "short MA(5) above long MA(20)"
+        return "Above"
     else:
-        return "short MA(5) below long MA(20)"
+        return "Below"
 
 def getRussianDollTrend(symbol):
     russianDoll = []
@@ -205,6 +206,11 @@ def getRussianDollTrend(symbol):
     trend, bullish_count = getTrendTimeframe(symbol, '1m')
     russianDoll += [bullish_count - 250]
     return russianDoll
+
+async def run_getTrendTimeframe(symbol:str, tf: str):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, getTrendTimeframe, symbol, tf)
+
 
 def getTrendTimeframe (symbol, tf):
     # Get historical data
@@ -248,7 +254,8 @@ def read_root():
 
 @app.get("/white_soldiers")
 async def get_data(symbol:str, tf: str):
-    data = getTrendTimeframe(symbol, tf)
+    task = asyncio.create_task(run_getTrendTimeframe(symbol, tf))
+    data = await task
     return {"data": data}
 
 @app.get("/russian_doll")

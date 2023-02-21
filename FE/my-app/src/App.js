@@ -1,5 +1,5 @@
 import './App.css';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 function App() {
   const [selectedTf, setSelectedTf] = useState("1h");
@@ -11,8 +11,11 @@ function App() {
   const [aggVolData, setAggVolData] = useState([]);
   const [globalData, setGlobalData] = useState([]);
   const [tableData, setTableData] = useState([]);
-
-  useEffect(() => {
+  const url = "http://localhost:8000"
+  const tfOptions = ["1d", "6h", "4h", "2h", "1h", "30m", "15m", "5m", "1m"];
+  
+  
+  const getPromises = (tf) => {
     const requestOptions = {
       method: 'GET',
       headers: {
@@ -23,91 +26,62 @@ function App() {
         'Access-Control-Allow-Credentials': 'true'
       }
     };
+    
+    return [      fetch(url +`/white_soldiers?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
+    fetch(url +`/russian_doll?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
+    fetch(url +`/bb_trend?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
+    fetch(url +`/vwap?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
+    fetch(url +`/atr?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
+    fetch(url +`/ob?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
+    fetch(url +`/agg_vol`, requestOptions),      
+    fetch(url +`/global`, requestOptions)    ];
+  };
 
-    fetch(`http://localhost:8000/white_soldiers?symbol=BTCUSDT&tf=${selectedTf}`, requestOptions)
-      .then(response => response.json())
-      .then(data => setWhiteSoldiersData(data.data));
+  const promises = useMemo(() => getPromises(selectedTf), [selectedTf]);
 
-    fetch(`http://localhost:8000/russian_doll?symbol=BTCUSDT&tf=${selectedTf}`, requestOptions)
-      .then(response => response.json())
-      .then(data => setRussianDollData(data.data));
-
-    fetch(`http://localhost:8000/bb_trend?symbol=BTCUSDT&tf=${selectedTf}`, requestOptions)
-      .then(response => response.json())
-      .then(data => setBbTrendData(data.data));
-
-    fetch(`http://localhost:8000/vwap?symbol=BTCUSDT&tf=${selectedTf}`, requestOptions)
-      .then(response => response.json())
-      .then(data => setVwapData(data.data));
-
-    fetch(`http://localhost:8000/atr?symbol=BTCUSDT&tf=${selectedTf}`, requestOptions)
-      .then(response => response.json())
-      .then(data => setAtrData(data.data));
-
-    fetch(`http://localhost:8000/ob?symbol=BTCUSDT&tf=${selectedTf}`, requestOptions)
-      .then(response => response.json())
-      .then(data => setTableData(data.data));
-
-    fetch('http://localhost:8000/agg_vol', requestOptions)
-      .then(response => response.json())
-      .then(data => setAggVolData(data.data));
-
-    fetch('http://localhost:8000/global', requestOptions)
-      .then(response => response.json())
-      .then(data => setGlobalData(data.data));
-  }, [selectedTf]);
+  useEffect(() => {
+    Promise.all(promises)
+      .then(responses => Promise.all(responses.map(response => response.json())))
+      .then(data => {
+        setWhiteSoldiersData(data[0].data);
+        setRussianDollData(data[1].data);
+        setBbTrendData(data[2].data);
+        setVwapData(data[3].data);
+        setAtrData(data[4].data);
+        setTableData(data[5].data);
+        setAggVolData(data[6].data);
+        setGlobalData(data[7].data);
+      });
+  }, [promises, selectedTf]);
 
   const handleTfChange = (event) => {
-    setSelectedTf(event.target.value);
+    const tf = event.target.value;
+    setSelectedTf(tf);
   }
-
-  const tfOptions = ["1d", "6h", "4h", "2h", "1h", "30m", "15m", "5m", "1m"];
+  
 
   return (
     <div className="App">
       <header className="App-header">
-        <div>
+        <div><font size="2">Pick your timeframe: </font>
           <select id="tf-select" value={selectedTf} onChange={handleTfChange}>
             {tfOptions.map((tf) => (
               <option key={tf} value={tf}>
                 {tf}
               </option>
             ))}
-          </select>
+          </select><font size="2"> for 500 candles</font>
         </div>
         <div>
-          whiteSoldiersData: {JSON.stringify(whiteSoldiersData[1] - 250)}
-        </div>
-        <div>
-          russianDollData: {JSON.stringify(russianDollData[0] - russianDollData[1]/2 - russianDollData[2]/4 - russianDollData[3]/12 - russianDollData[4]/60)}
-        </div>
-        <div>
-          Bollinger: {JSON.stringify(bbTrendData)}
-        </div>
-        <div>
-          VWAP: {JSON.stringify(vwapData)}
-        </div>
-        <div>
-          Avg True Range: {JSON.stringify(atrData)}
-        </div>
-        <div>
-          {tableData.max && (
-            <div>
-              <label>Max Bids: {JSON.stringify(tableData.max.asks)}</label>
-            </div>
-          )}
-        </div>
-        <div>{aggVolData[0] && (
-          <div>
-            <label>24h price: {JSON.stringify(aggVolData[0].price_change_percentage_24h.toFixed(2))}</label>
-          </div>
-        )}
-        </div>
-        <div>{(globalData.data) && (
-          <div>
-            <label>24h market cap: {JSON.stringify(globalData.data.market_cap_change_percentage_24h_usd.toFixed(2))}</label>
-            </div>
-            )}        
+          White Soldiers: {whiteSoldiersData[1] - 250} <br />
+          Russian Doll: {(russianDollData[0] - russianDollData[1] / 2 - russianDollData[2] / 4 - russianDollData[3] / 12 - russianDollData[4] / 60).toFixed(2)}<br />
+          Bollinger: {bbTrendData}<br />
+          VWAP(MA5): {vwapData}<br />
+          Avg True Range: {atrData}<br />
+          Max Bids: {tableData.max && tableData.max.asks}<br />
+          Max Asks: {tableData.max && tableData.max.bids}<br />
+          24h btc price: {aggVolData[0] && (aggVolData[0].price_change_percentage_24h.toFixed(2))}%<br />
+          24h market cap: {globalData.data && globalData.data.market_cap_change_percentage_24h_usd.toFixed(2)}%
         </div>
       </header>
     </div>
