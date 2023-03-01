@@ -53,7 +53,7 @@ def getHistorical(symbol, tf):
     # Convert the response to a JSON object
     df = response.json()    
     return df
-def calculate_BB_trend(symbol, tf):
+def calculate_BB_trend(tf):
     df = pd.DataFrame(getHistorical(symbol, tf), columns=[
     "open_time",
     "open_price",
@@ -149,55 +149,32 @@ def getTrendTimeframe (tf):
     # Determine if the majority of candles on the lower time-frame are bullish
     trend = (bullish_count > len(open_lower) / 2)
     return trend, bullish_count
+def calculate_Moving_Average(tf,m):
+    # Get historical data
+    dt = getHistorical(symbol, tf)
+    # Extract the relevant data from the historical candles
+    close = np.array([candle[4] for candle in dt])
+    close = close.astype(float)
+    ma = np.array([np.mean(close[i:i+int(m)]) for i in range(len(close)-int(m))])
+    return ma[-1]
 
 count = 0
 while True:
     count += 1
     if count % (1*10) == 0:
-        s = getRussianDollTrend()
-        arr = np.array(eval(s))  # Use eval to convert string to list, then convert to NumPy array
-        b_bulls = np.sum(arr) > nbrOfBullishCandles
-        s_bulls = np.sum(arr) < (nbrOfBullishCandles * -1)
-        vwap  = calculate_vwap(symbol, '1h')
-        bb = calculate_BB_trend(symbol, '5m')
         #Get BTC price
         response = requests.get("https://api.coinbase.com/v2/prices/spot?currency=USD")
         # parse the response to get the current BTC price
-        print(np.sum(arr), bb, vwap)
-        price = response.json()["data"]["amount"]
-        if bb == 'BUY' and b_bulls and vwap == 'BUY' and long_position == 0 and short_position == 0:
-            long_position = portfolio_value / price
-            portfolio_value += portfolio_value - (price * long_position)
-            SLL = (price * risk_long)
-            TPL = (price * greed_long)
-            print("Bought long: "  + str(long_position) + " @ " + str(price) + '\n')
-            print("TPL & SLL: "  + str(TPL) + " / " + str(SLL) + '\n')
-        elif bb == 'SELL' and s_bulls and vwap == 'SELL' and long_position == 0 and short_position == 0:
-            short_position = portfolio_value / price
-            portfolio_value += portfolio_value - (price * short_position)
-            SLS = (price * risk_short)
-            TPS = (price * greed_short)
-            print("Bought short: "  + str(short_position) + " @ " + str(price) + '\n')
-            print("TPS & SLS: "  + str(TPS) + " / " + str(SLS) + '\n')
+        bb = calculate_BB_trend('5m')
+        print(bb)
+        ma20 = calculate_Moving_Average('5m', 20)
+        ma100 = calculate_Moving_Average('5m', 100)
+        price = float(response.json()["data"]["amount"])
+        print('MA20: ' + str(ma20))
+        print('MA100: ' + str(ma100))
+        print('Price: ' + str(price))
 
-        elif long_position != 0 or short_position != 0:
-            if float(price) <= SLL or float(price) >= TPL:
-                print('close Long position @:' + str(price) + '\n')
-                portfolio_value = price * long_position
-                long_position = 0
-                SLL = 0
-                TPL = 0
-                print('Portfolio :' + str(portfolio_value) + '\n')
-            elif float(price) >= SLS or float(price) <= TPS:
-                print('close Short position @:' + str(price) + '\n')
-                portfolio_value = price * short_position
-                short_position = 0 
-                SLS = 0 
-                TPS = 0
-                print('Portfolio :' + str(portfolio_value) + '\n')
-            else:
-                print(bb, b_bulls, s_bulls, vwap, long_position, short_position)
-                print('Portfolio :' + str(portfolio_value) + '\n')
+
     time.sleep(1)  # Wait 1 second before looping again
 
 
