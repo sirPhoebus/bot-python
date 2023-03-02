@@ -1,0 +1,1 @@
+python trainCNN.py --num_epochs 200

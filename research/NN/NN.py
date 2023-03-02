@@ -53,49 +53,47 @@ optimizer = torch.optim.Adamax(net.parameters(), lr=0.001)
 
 if os.path.isfile('./NN.pth'):
     print("Loading model...")
-    checkpoint = torch.load('checkpoint.pth')
+    checkpoint = torch.load('NN.pth')
     net.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
     loss = checkpoint['loss']
-
-# Train the neural network on the GPU
-for epoch in range(num_epochs):
-    for inputs, targets in data_loader:
-        optimizer.zero_grad()
-        outputs = net(inputs)
-        loss = criterion(outputs, targets)
-        loss.backward()
-        optimizer.step()
-        print(f'Epoch: {epoch+1}/{num_epochs} Loss: {loss.item():.4f}')
-
-# Save the state of the model and optimizer
-print("Saving new model...")
-torch.save({
-    'epoch': num_epochs,
-    'model_state_dict': net.state_dict(),
-    'optimizer_state_dict': optimizer.state_dict(),
-    'loss': loss
-}, 'NN.pth')
-
-test_loader = DataLoader(dataset, batch_size=24, shuffle=True)
-
-# Evaluate the trained neural network on the input data
-# Initialize counters
-correct = 0
-total = 0
-
-# Disable gradient calculations during evaluation
-with torch.no_grad():
-    for inputs, targets in test_loader:
-        # Make predictions
-        outputs = net(inputs)
-        predicted = outputs.argmax(dim=1)  # get the index of the maximum value in the output tensor
-        
-        # Update counters
-        total += targets.size(0)
-        correct += (predicted == targets.argmax(dim=1)).sum().item()
-
-# Compute accuracy
-accuracy = 100 * correct / total
-print(f"Test accuracy: {accuracy:.2f}%")
+    print("Model loaded.")
+    net = Net().to(device)
+    net.load_state_dict(checkpoint['model_state_dict'])
+else: 
+    # Train the neural network on the GPU
+    for epoch in range(num_epochs):
+        for inputs, targets in data_loader:
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(outputs, targets)
+            loss.backward()
+            optimizer.step()
+            print(f'Epoch: {epoch+1}/{num_epochs} Loss: {loss.item():.4f}')
+    # Save the state of the model and optimizer
+    print("Saving new model...")
+    torch.save({
+        'epoch': num_epochs,
+        'model_state_dict': net.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss': loss
+    }, 'NN.pth')
+    test_loader = DataLoader(dataset, batch_size=24, shuffle=True)
+    # Evaluate the trained neural network on the input data
+    # Initialize counters
+    correct = 0
+    total = 0
+    # Disable gradient calculations during evaluation
+    with torch.no_grad():
+        for inputs, targets in test_loader:
+            # Make predictions
+            outputs = net(inputs)
+            predicted = outputs.argmax(dim=1)  # get the index of the maximum value in the output tensor
+            
+            # Update counters
+            total += targets.size(0)
+            correct += (predicted == targets.argmax(dim=1)).sum().item()
+    # Compute accuracy
+    accuracy = 100 * correct / total
+    print(f"Test accuracy: {accuracy:.2f}%")
