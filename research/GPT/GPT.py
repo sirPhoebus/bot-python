@@ -15,10 +15,12 @@ temperature=1.2,
 messages = message)
 
 
-#print(response['choices'][0]['message']['content'])
-for choice in response.choices:
-    for character in choice.message.content:
-        print(character, end='', flush=True)
-        time.sleep(0.05)
-    print()
+print(response['choices'][0]['message']['content'])
+
+# typing machine
+# for choice in response.choices:
+#     for character in choice.message.content:
+#         print(character, end='', flush=True)
+#         time.sleep(0.05)
+#     print()
 
