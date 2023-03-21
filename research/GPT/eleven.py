@@ -4,13 +4,13 @@ import json
 import pygame
 from io import BytesIO
 
-OPENAI_API_KEY = 'magic'
+OPENAI_API_KEY = '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'
 openai.api_key = OPENAI_API_KEY
-
-message = [{'role': 'user', 'content': 'tell me a joke'}]
+eleven_key = 'key'
+message = [{'role': 'user', 'content': 'What is the pros of using the pyhton interactive window in Visual Code compare to just running the code in the terminal ?'}]
 response = openai.ChatCompletion.create(
     model="gpt-3.5-turbo",
-    max_tokens=4000,
+    max_tokens=2000,
     temperature=1.2,
     messages=message
 )
@@ -23,7 +23,7 @@ ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq
 headers = {
     'accept': 'audio/mpeg',
     'Content-Type': 'application/json',
-    'xi-api-key': 'magic'
+    'xi-api-key': eleven_key
 }
 data = {
     "text": response_text,
@@ -36,7 +36,6 @@ response_elevenlabs = requests.post(ELEVENLABS_API_URL, headers=headers, data=js
 if response_elevenlabs.status_code == 200:
     # Load the audio data and play it
     audio_data = BytesIO(response_elevenlabs.content)
-    print(audio_data)
 # Initialize Pygame
 pygame.init()
 
