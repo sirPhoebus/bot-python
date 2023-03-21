@@ -4,7 +4,7 @@ import json
 import pygame
 from io import BytesIO
 
-OPENAI_API_KEY = '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'
+OPENAI_API_KEY = 'key'
 openai.api_key = OPENAI_API_KEY
 eleven_key = 'key'
 message = [{'role': 'user', 'content': 'What is the pros of using the pyhton interactive window in Visual Code compare to just running the code in the terminal ?'}]

@@ -8,7 +8,7 @@ filename = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + ".txt"
 
 
 
-OPENAI_API_KEY = 'dd'
+OPENAI_API_KEY = 'key'
 openai.api_key = OPENAI_API_KEY
 
 conversation = []
