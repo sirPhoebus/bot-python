@@ -1,0 +1,92 @@
+<html>
+
+<head>
+    <title>VWAP</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+</head>
+
+<body>
+    <h1>VWAP</h1>
+    <canvas id="vwap-chart"></canvas>
+    <script>
+        var vwapData = {
+            labels: [],
+            datasets: [{
+                label: 'VWAP',
+                data: [],
+                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Volume',
+                data: [],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        };
+
+        var vwapChart = new Chart(document.getElementById('vwap-chart'), {
+            type: 'line',
+            data: vwapData,
+            options: {
+                scales: {
+                    yAxes: [{
+                        ticks: {
+
+                        }
+                    }]
+                }
+            }
+        });
+
+
+        function updateVWAP() {
+            localStorage.removeItem("prices");
+localStorage.removeItem("volumes");
+    fetch("https://api.coinbase.com/v2/prices/BTC-USD/buy")
+        .then(response => response.json())
+        .then(data => {
+            const price = data.data.amount;
+            if (!price) {
+                console.log("Error: No price data returned from API");
+                return;
+            }
+            fetch("https://api.coinbase.com/v2/prices/BTC-USD/sell")
+                .then(response => response.json())
+                .then(data => {
+                    const volume = data.data.amount;
+                    if (!volume) {
+                        console.log("Error: No volume data returned from API");
+                        return;
+                    }
+                    let vwap = 0;
+                    let previous_prices = JSON.parse(localStorage.getItem("prices")) || [];
+                    let previous_volumes = JSON.parse(localStorage.getItem("volumes")) || [];
+                    previous_prices.push(price);
+                    previous_volumes.push(volume);
+                                       
+                   
+                    console.log("previous_prices",previous_prices);
+                    console.log("previous_volumes",previous_volumes);
+
+                    vwap = total_price_volume / total_volume;
+                    localStorage.setItem("prices", JSON.stringify(previous_prices));
+                    localStorage.setItem("volumes", JSON.stringify(previous_volumes));
+                    vwapData.labels.push(new Date().toLocaleString());
+                    vwapData.datasets[0].data.push(vwap);
+                    vwapData.datasets[1].data.push(volume);
+                    console.log("Vwap: ", vwapData);
+                    vwapChart.update();
+
+                });
+        });
+}
+
+
+        setInterval(updateVWAP, 1000);
+    </script>
+</body>
+
+</html>

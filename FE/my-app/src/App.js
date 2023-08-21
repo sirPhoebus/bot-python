@@ -2,7 +2,9 @@ import './App.css';
 import React, { useEffect, useState, useMemo } from 'react';
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedTf, setSelectedTf] = useState("1h");
+  const [selectedSymbol, setSelectedSymbol] = useState("BTCUSDT");
   const [whiteSoldiersData, setWhiteSoldiersData] = useState([]);
   const [russianDollData, setRussianDollData] = useState([]);
   const [bbTrendData, setBbTrendData] = useState([]);
@@ -11,11 +13,11 @@ function App() {
   const [aggVolData, setAggVolData] = useState([]);
   const [globalData, setGlobalData] = useState([]);
   const [tableData, setTableData] = useState([]);
-  const url = "http://localhost:8000"
+  const url = "http://localhost:8000";
   const tfOptions = ["1d", "6h", "4h", "2h", "1h", "30m", "15m", "5m", "1m"];
-  
-  
-  const getPromises = (tf) => {
+  const symbolOptions = ["ETHUSDT", "BTCUSDT", "BNBUSDT"];
+
+  const getPromises = (tf, symbol) => {
     const requestOptions = {
       method: 'GET',
       headers: {
@@ -26,18 +28,29 @@ function App() {
         'Access-Control-Allow-Credentials': 'true'
       }
     };
-    
-    return [      fetch(url +`/white_soldiers?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
-    fetch(url +`/russian_doll?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
-    fetch(url +`/bb_trend?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
-    fetch(url +`/vwap?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
-    fetch(url +`/atr?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
-    fetch(url +`/ob?symbol=BTCUSDT&tf=${tf}`, requestOptions),      
-    fetch(url +`/agg_vol`, requestOptions),      
-    fetch(url +`/global`, requestOptions)    ];
+
+    return [
+      fetch(url + `/white_soldiers?symbol=${symbol}&tf=${tf}`, requestOptions),
+      fetch(url + `/russian_doll?symbol=${symbol}&tf=${tf}`, requestOptions),
+      fetch(url + `/bb_trend?symbol=${symbol}&tf=${tf}`, requestOptions),
+      fetch(url + `/vwap?symbol=${symbol}&tf=${tf}`, requestOptions),
+      fetch(url + `/atr?symbol=${symbol}&tf=${tf}`, requestOptions),
+      fetch(url + `/ob?symbol=${symbol}&tf=${tf}`, requestOptions),
+      fetch(url + `/agg_vol`, requestOptions),
+      fetch(url + `/global`, requestOptions)
+    ];
   };
 
-  const promises = useMemo(() => getPromises(selectedTf), [selectedTf]);
+  const promises = useMemo(() => getPromises(selectedTf, selectedSymbol), [selectedTf, selectedSymbol]);
+
+  const handleDropdownChange = (event) => {
+    setIsLoading(true);
+    if (event.target.id === 'tf-select') {
+      setSelectedTf(event.target.value);
+    } else {
+      setSelectedSymbol(event.target.value);
+    }
+  };
 
   useEffect(() => {
     Promise.all(promises)
@@ -51,41 +64,85 @@ function App() {
         setTableData(data[5].data);
         setAggVolData(data[6].data);
         setGlobalData(data[7].data);
+        setIsLoading(false);
       });
-  }, [promises, selectedTf]);
+  }, [promises, selectedTf, selectedSymbol]);
 
-  const handleTfChange = (event) => {
-    const tf = event.target.value;
-    setSelectedTf(tf);
-  }
-  
-
-  return (
+return (
     <div className="App">
       <header className="App-header">
-        <div><font size="2">Pick your timeframe: </font>
-          <select id="tf-select" value={selectedTf} onChange={handleTfChange}>
-            {tfOptions.map((tf) => (
-              <option key={tf} value={tf}>
-                {tf}
-              </option>
-            ))}
-          </select><font size="2"> for 500 candles</font>
-        </div>
-        <div>
-          White Soldiers: {whiteSoldiersData[1] - 250} <br />
-          Russian Doll: {(russianDollData[0] - russianDollData[1] / 2 - russianDollData[2] / 4 - russianDollData[3] / 12 - russianDollData[4] / 60).toFixed(2)}<br />
-          Bollinger: {bbTrendData}<br />
-          VWAP(MA5): {vwapData}<br />
-          Avg True Range: {atrData}<br />
-          Max Bids: {tableData.max && tableData.max.asks}<br />
-          Max Asks: {tableData.max && tableData.max.bids}<br />
-          24h btc price: {aggVolData[0] && (aggVolData[0].price_change_percentage_24h.toFixed(2))}%<br />
-          24h market cap: {globalData.data && globalData.data.market_cap_change_percentage_24h_usd.toFixed(2)}%
-        </div>
+        {isLoading ? (
+          <div>Loading data... Please wait.</div>
+        ) : (
+          <>
+            <div>
+              <div>
+                <font size="2">Pick your timeframe: </font>
+                <select id="tf-select" value={selectedTf} onChange={handleDropdownChange}>
+                  {tfOptions.map((tf) => (
+                    <option key={tf} value={tf}>{tf}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <font size="2">Pick your symbol: </font>
+                <select id="symbol-select" value={selectedSymbol} onChange={handleDropdownChange}>
+                  {symbolOptions.map((symbol) => (
+                    <option key={symbol} value={symbol}>{symbol}</option>
+                  ))}
+                </select>
+              </div>
+              <font size="2"> for 500 candles</font>
+            </div>
+<table style={{ border: '1px solid #ddd', width: '100%', textAlign: 'left', borderCollapse: 'collapse' }}>
+  <tbody>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>White Soldiers:</td>
+      <td style={{ padding: '8px', color: whiteSoldiersData[1] - 250 < 0 ? 'red' : 'green' }}>
+        {whiteSoldiersData[1] - 250 ? whiteSoldiersData[1] - 250 : 'Loading...'}
+      </td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>(1h -> 1m):</td>
+      <td style={{ padding: '8px' }}>{russianDollData[0]} , {russianDollData[1]} , {russianDollData[2]} , {russianDollData[3]} , {russianDollData[4]}</td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>Bollinger:</td>
+      <td style={{ padding: '8px' }}>{bbTrendData}</td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>VWAP(MA5):</td>
+      <td style={{ padding: '8px', color: vwapData === 'Above' ? 'green' : 'red' }}>{vwapData ? vwapData : 'Loading...'}</td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>Avg True Range:</td>
+      <td style={{ padding: '8px', color: atrData === 'downtrend' ? 'red' : 'green' }}>{atrData ? atrData : 'Loading...'}</td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>Max Bids:</td>
+      <td style={{ padding: '8px' }}>{tableData.max && tableData.max.asks}</td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>Max Asks:</td>
+      <td style={{ padding: '8px' }}>{tableData.max && tableData.max.bids}</td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>24h btc price:</td>
+      <td style={{ padding: '8px' }}>{aggVolData[0] && (aggVolData[0].price_change_percentage_24h.toFixed(2))}%</td>
+    </tr>
+    <tr style={{ borderBottom: '1px solid #ddd' }}>
+      <td style={{ padding: '8px' }}>24h market cap:</td>
+      <td style={{ padding: '8px' }}>{globalData.data && globalData.data.market_cap_change_percentage_24h_usd.toFixed(2)}%</td>
+    </tr>
+  </tbody>
+</table>
+          </>
+        )}
       </header>
     </div>
   );
 }
 
 export default App;
+
+
