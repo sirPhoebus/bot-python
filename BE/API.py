@@ -132,18 +132,18 @@ def getOrderBook(symbol):
 
 def calculate_BB_trend(symbol, tf):
     df = pd.DataFrame(getHistorical(symbol, tf), columns=[
-    "open_time",
-    "open_price",
-    "high_price",
-    "low_price",
-    "close_price",
-    "volume",
-    "close_time",
-    "quote_asset_volume",
-    "number_of_trades",
-    "taker_buy_base_asset_volume",
-    "taker_buy_quote_asset_volume",
-    "unused_field"
+        "open_time",
+        "open_price",
+        "high_price",
+        "low_price",
+        "close_price",
+        "volume",
+        "close_time",
+        "quote_asset_volume",
+        "number_of_trades",
+        "taker_buy_base_asset_volume",
+        "taker_buy_quote_asset_volume",
+        "unused_field"
     ])
     df["close_price"] = df["close_price"].astype(float)
     df["low_price"] = df["low_price"].astype(float)
@@ -155,14 +155,26 @@ def calculate_BB_trend(symbol, tf):
     dev = mult * np.std(hp[-length:])
     upper = basis + dev
     lower = basis - dev
+
+    df['upper_bound'] = basis + dev
+    df['lower_bound'] = basis - dev
+    df['basis'] = basis
+
     if current_price <= lower:
-        #Lower Bound Hit!
         trend = 'BUY'
-    if current_price >= upper:
+    elif current_price >= upper:
         trend = 'SELL'
-    if current_price > lower or current_price < upper:
+    else:
         trend = 'In range'
-    return trend
+
+    # Convert the dataframe to a list of dictionaries for recharts
+    chart_data = df[["open_time", "close_price", "upper_bound", "lower_bound", "basis"]].to_dict(orient='records')
+
+    return {
+        "trend": trend,
+        "data": chart_data
+    }
+
 
 def calculate_vwap(symbol, tf):
     df = pd.DataFrame(getHistorical(symbol, tf), columns=[
