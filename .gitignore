@@ -8,3 +8,4 @@ fe2/node_modules
 demo/node_modules
 node_modules
 strategy-backtester/node_modules
+websocket-client/node_modules
