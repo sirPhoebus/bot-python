@@ -19,7 +19,7 @@ openai.api_key = "YOUR KEY"
 symbols = ["BTC", "ETH"]
 
 def get_all_crypto_news():
-    API_KEY = "ff795da3afca47fe9ef344bc08e7d9d2"
+    API_KEY = "my_key"
     all_news = {}
 
     for symbol in symbols:
